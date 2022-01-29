@@ -1,10 +1,10 @@
 -- ====================
--- || EZMouse v0.2.0 ||
+-- || EZMouse v0.2.0-dirty ||
 -- ====================
 
 dofile_once("data/scripts/lib/utilities.lua")
 
-local path, x, y, sx, sy, dx, dy, left_down, left_pressed, right_down, right_pressed,
+local path, world_x, world_y, sx, sy, dx, dy, left_down, left_pressed, right_down, right_pressed,
   left_down_last_frame, right_down_last_frame
 local resize_start_sx, resize_start_sy = 0, 0
 local resize_start_width, resize_start_height = 0, 0
@@ -286,23 +286,17 @@ local function update(gui)
   mouse_loop_last_sy = mouse_loop_last_sy or 0
 	-- Get whatever state we can directly from the component
 	if controls_component and GameGetFrameNum() > 10 then
-    x, y = ComponentGetValue2(controls_component, "mMousePosition")
-
     left_down = ComponentGetValue2(controls_component, "mButtonDownFire")
     left_pressed = ComponentGetValue2(controls_component, "mButtonFrameFire") == GameGetFrameNum()
-
     right_down = ComponentGetValue2(controls_component, "mButtonDownRightClick")
     right_pressed = ComponentGetValue2(controls_component, "mButtonFrameRightClick") == GameGetFrameNum()
 
-    local virt_x = MagicNumbersGetValue("VIRTUAL_RESOLUTION_X")
-    local virt_y = MagicNumbersGetValue("VIRTUAL_RESOLUTION_Y")
     local screen_width, screen_height = GuiGetScreenDimensions(EZMouse_gui)
-    local scale_x = virt_x / screen_width
-    local scale_y = virt_y / screen_height
-    local cx, cy = GameGetCameraPos()
-    sx, sy = (x - cx) / scale_x + screen_width / 2 + 1.5, (y - cy) / scale_y + screen_height / 2
+    local mouse_raw_x, mouse_raw_y = ComponentGetValue2(controls_component, "mMousePositionRaw")
+    sx, sy = mouse_raw_x * screen_width / 1280, mouse_raw_y * screen_height / 720
+
     -- Calculate mMouseDelta ourselves because the native one isn't consistent across all window sizes
-    dx, dy = math.floor(sx + 0.5) - math.floor(mouse_loop_last_sx + 0.5), math.floor(sy + 0.5) - math.floor(mouse_loop_last_sy + 0.5)
+    dx, dy = sx - mouse_loop_last_sx, sy - mouse_loop_last_sy
     -- If a widget is being hovered, saves a reference to the instance, otherwise stays nil
     local hovered_draggable
     -- If one of a widget's resize handle is being hovered, saves a reference to the widget instance and the hovered resize handle, otherwise stays nil
@@ -438,16 +432,18 @@ local function update(gui)
       end
     end
 
-    if left_pressed then fire_global_event("mouse_down", { button = "left", screen_x = sx, screen_y = sy, world_x = x, world_y = y }) end
-    if right_pressed then fire_global_event("mouse_down", { button = "right", screen_x = sx, screen_y = sy, world_x = x, world_y = y }) end
-    if not left_down and left_down_last_frame then fire_global_event("mouse_up", { button = "left", screen_x = sx, screen_y = sy, world_x = x, world_y = y }) end
-    if not right_down and right_down_last_frame then fire_global_event("mouse_up", { button = "right", screen_x = sx, screen_y = sy, world_x = x, world_y = y }) end
+    world_x, world_y = ComponentGetValue2(controls_component, "mMousePosition")
+
+    if left_pressed then fire_global_event("mouse_down", { button = "left", screen_x = sx, screen_y = sy, world_x = world_x, world_y = world_y }) end
+    if right_pressed then fire_global_event("mouse_down", { button = "right", screen_x = sx, screen_y = sy, world_x = world_x, world_y = world_y }) end
+    if not left_down and left_down_last_frame then fire_global_event("mouse_up", { button = "left", screen_x = sx, screen_y = sy, world_x = world_x, world_y = world_y }) end
+    if not right_down and right_down_last_frame then fire_global_event("mouse_up", { button = "right", screen_x = sx, screen_y = sy, world_x = world_x, world_y = world_y }) end
 
     local movement_tolerance = 0.5
     local vx = sx - mouse_loop_last_sx
     local vy = sy - mouse_loop_last_sy
     if math.abs(vx) >= movement_tolerance or math.abs(vy) >= movement_tolerance then
-      fire_global_event("mouse_move", { screen_x = sx, screen_y = sy, world_x = x, world_y = y, dx = vx, dy = vy })
+      fire_global_event("mouse_move", { screen_x = sx, screen_y = sy, world_x = world_x, world_y = world_y, dx = vx, dy = vy })
     end
 
     mouse_loop_last_sx = sx
@@ -469,8 +465,8 @@ return function(lib_path)
       return ({
         screen_x = sx,
         screen_y = sy,
-        world_x = x,
-        world_y = y,
+        world_x = world_x,
+        world_y = world_y,
         dx = dx,
         dy = dy,
         left_down = left_down,
