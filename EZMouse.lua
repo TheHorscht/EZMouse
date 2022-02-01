@@ -3,13 +3,17 @@
 -- ====================
 
 dofile_once("data/scripts/lib/utilities.lua")
+local update_draggable = dofile_once("mods/dragging/lib/EZMouse/resize.lua")
 
 local path, world_x, world_y, sx, sy, dx, dy, left_down, left_pressed, right_down, right_pressed,
   left_down_last_frame, right_down_last_frame
+local drag_start_sx, drag_start_sy = 0, 0
+local resize_start_x, resize_start_y = 0, 0
 local resize_start_sx, resize_start_sy = 0, 0
 local resize_start_width, resize_start_height = 0, 0
 local current_widget_id = 1
 local do_draw_resize_cursor = false
+local resize_handle_size = 8
 
 local function are_floats_equal(f1, f2)
   return math.abs(f1 - f2) < 0.0001
@@ -30,13 +34,12 @@ local function render_dragging_widget_at_mouse_pos(current_x, current_y)
     return dragging_widget.result
   end
   dragging_widget.last_frame_ran = GameGetFrameNum()
-  dragging_widget.result = {
-    dx = 0,
-    dy = 0,
-    was_dragged = false,
-    drag_start = false,
-    drag_end = false,
-  }
+  dragging_widget.result = dragging_widget.result or {}
+  dragging_widget.result.dx = 0
+  dragging_widget.result.dy = 0
+  dragging_widget.result.was_dragged = false
+  dragging_widget.result.drag_start = false
+  dragging_widget.result.drag_end = false
   GuiIdPushString(EZMouse_gui, "boo")
   GuiOptionsAddForNextWidget(EZMouse_gui, GUI_OPTION.NoPositionTween)
   GuiOptionsAddForNextWidget(EZMouse_gui, GUI_OPTION.ClickCancelsDoubleClick)
@@ -51,9 +54,13 @@ local function render_dragging_widget_at_mouse_pos(current_x, current_y)
     if not dragging_widget.last_x then
       dragging_widget.last_x = dx
       dragging_widget.last_y = dy
-      dragging_widget.start_x = current_x
-      dragging_widget.start_y = current_y
       dragging_widget.result.drag_start = true
+      dragging_widget.result.start_x = current_x
+      dragging_widget.result.start_y = current_y
+      dragging_widget.result.drag_offset_x = sx - current_x
+      dragging_widget.result.drag_offset_y = sy - current_y
+      dragging_widget.result.drag_start_x = sx
+      dragging_widget.result.drag_start_y = sy
     end
     dragging_widget.result.dx = dx - dragging_widget.last_x
     dragging_widget.result.dy = dy - dragging_widget.last_y
@@ -66,8 +73,6 @@ local function render_dragging_widget_at_mouse_pos(current_x, current_y)
     dragging_widget.last_x = nil
     dragging_widget.last_y = nil
     dragging_widget.result.drag_end = true
-    dragging_widget.result.start_x = dragging_widget.start_x
-    dragging_widget.result.start_y = dragging_widget.start_y
   end
   GuiIdPop(EZMouse_gui)
   return dragging_widget.result
@@ -108,25 +113,44 @@ local function fire_event(self, name, ...)
 end
 
 local widget_instances = setmetatable({}, { __mode = "v" })
+-- The privates should be read-only from outside
 local widget_privates = setmetatable({}, { __mode = "k" })
 local Widget = {}
 function Widget:__index(key)
+  if key == "_members" then
+    error("Don't touch the internals :)", 2)
+  end
   -- Private getter (read-only)
   if widget_privates[self][key] ~= nil then
     return widget_privates[self][key]
   end
-  -- Static methods getter
-  if Widget[key] ~= nil then
-    return Widget[key]
+  -- Static getter
+  if rawget(Widget, key) ~= nil then
+    return rawget(Widget, key)
   end
   -- Public getter
-  return rawget(self, key)
+  return self._members[key]
 end
 function Widget:__newindex(key, value)
   if widget_privates[self][key] ~= nil then
     error("'"..key.."' is read-only.", 2)
   end
-  rawset(self, key, value)
+  self._members[key] = value
+end
+local function validate_constraints(c)
+  c = c or {}
+  if type(c) ~= "table" then
+    error("'constraints' must be a table", 3)
+  end
+  for k, v in pairs(c) do
+    if k ~= "left" and k~= "top" and k ~= "right" and k~= "bottom" then
+      error(("'%s' is not a valid constraint type"):format(k), 3)
+    end
+    if type(v) ~= "number" then
+      error(("Value for constraints.'%s' must be of type 'number'."):format(k), 3)
+    end
+  end
+  return c
 end
 -- Constructor
 function Widget:__call(props)
@@ -134,21 +158,25 @@ function Widget:__call(props)
     error("'props' needs to be a table.", 2)
   end
 
-  local instance = setmetatable({
+  -- This could probably be done better
+  local instance = setmetatable({ _members = {
     x = props.x or 0,
     y = props.y or 0,
     z = props.z or 0,
     width = props.width or 100,
     height = props.height or 100,
-    min_width = props.min_width or 10,
-    min_height = props.min_height or 10,
+    min_width = props.min_width or 1,
+    min_height = props.min_height or 1,
     draggable = props.draggable == nil and true or not not props.draggable,
+    drag_anchor = props.drag_anchor or nil, -- either "center" or nil
     drag_granularity = props.drag_granularity or 0.1,
     resizable = not not props.resizable,
     resize_granularity = props.resize_granularity or 0.1,
     resize_symmetrical = not not props.resize_symmetrical,
     resize_uniform = not not props.resize_uniform,
     enabled = props.enabled == nil and true or not not props.enabled,
+    hoverable = props.hoverable == nil and true or not not props.hoverable,
+    constraints = validate_constraints(props.constraints),
     event_listeners = {
       mouse_down = {},
       drag = {},
@@ -158,7 +186,7 @@ function Widget:__call(props)
       resize_start = {},
       resize_end = {},
     }
-  }, Widget)
+  }}, Widget)
   widget_privates[instance] = {
     resizing = false,
     dragging = false,
@@ -183,12 +211,6 @@ function Widget:__call(props)
 end
 
 function Widget:AddEventListener(event_name, listener)
-  -- local event_listeners = rawget(self, "event_listeners")
-  -- if not event_listeners[event_name] then
-  --   error("No event by the name of '"..event_name.."'", 2)
-  -- end
-  -- table.insert(event_listeners[event_name], listener)
-  -- return listener
   if not self.event_listeners[event_name] then
     error("No event by the name of '"..event_name.."'", 2)
   end
@@ -197,17 +219,6 @@ function Widget:AddEventListener(event_name, listener)
 end
 
 function Widget:RemoveEventListener(event_name, listener)
-  -- local event_listeners = rawget(self, "event_listeners")
-  -- if not event_listeners[event_name] then
-  --   error("No event by the name of '"..event_name.."'", 2)
-  -- end
-  -- for i, v in ipairs(event_listeners[event_name]) do
-  --   if v == listener then
-  --     table.remove(event_listeners[event_name], i)
-  --     return
-  --   end
-  -- end
-  -- error("Cannot remove a listener that was never registered.", 2)
   if not self.event_listeners[event_name] then
     error("No event by the name of '"..event_name.."'", 2)
   end
@@ -310,14 +321,15 @@ local function update(gui)
       -- Check current hover status of all widgets, main area and resize handles
       for i, draggable in ipairs(widget_instances) do
         if draggable.enabled then
-          local resize_handle_size = draggable.resizable and 6 or 0
-          widget_privates[draggable].hovered = is_inside_rect(sx, sy, draggable.x + resize_handle_size/2, draggable.y + resize_handle_size/2, draggable.width - resize_handle_size, draggable.height - resize_handle_size)
+          local resize_handle_size_ = draggable.resizable and resize_handle_size or 0
+          widget_privates[draggable].hovered = is_inside_rect(sx, sy, draggable.x + resize_handle_size_/2, draggable.y + resize_handle_size_/2, draggable.width - resize_handle_size_, draggable.height - resize_handle_size_)
+          widget_privates[draggable].hovered = draggable.hoverable and widget_privates[draggable].hovered
           if widget_privates[draggable].hovered then
             hovered_draggable = draggable
             -- Only one should be able to be hovered at a time, so no need to continue
             break
           else
-            local resize_handles = calculate_handle_props(draggable, resize_handle_size)
+            local resize_handles = calculate_handle_props(draggable, resize_handle_size_)
             for i, handle in ipairs(resize_handles) do
               if is_inside_rect(sx, sy, handle.x, handle.y, handle.width, handle.height) then
                 widget_privates[draggable].resize_handle_hovered = i
@@ -334,13 +346,15 @@ local function update(gui)
       end
     end
 
-    if hovered_draggable then
+    if hovered_draggable and hovered_draggable.draggable then
       local draggable = hovered_draggable
       local result = render_dragging_widget_at_mouse_pos(draggable.x, draggable.y)
       if result.drag_start then
         widget_privates[draggable].dragging = true
         dragging_draggable = draggable
         fire_event(draggable, "drag_start")
+        drag_start_sx = sx
+        drag_start_sy = sy
       end
     end
     if resize_handle_hovered_draggable then
@@ -354,8 +368,8 @@ local function update(gui)
         widget_privates[draggable].resize_handle_index = resize_handle_hovered_draggable.handle_index
         widget_privates[draggable].resize_handle = resize_handle_hovered_draggable.hovered_handle
         fire_event(draggable, "resize_start", { handle_index = resize_handle_hovered_draggable.handle_index })
-        resize_start_sx = sx
-        resize_start_sy = sy
+        resize_start_sx = resize_handle_hovered_draggable.hovered_handle.x + (resize_handle_size / 2)
+        resize_start_sy = resize_handle_hovered_draggable.hovered_handle.y + (resize_handle_size / 2)
         resize_start_x = draggable.x
         resize_start_y = draggable.y
         resize_start_width = draggable.width
@@ -370,8 +384,14 @@ local function update(gui)
       local result = render_dragging_widget_at_mouse_pos(draggable.x, draggable.y)
       if result.was_dragged then
         fire_event(draggable, "drag", { dx = result.dx, dy = result.dy })
-        draggable.x = draggable.x + result.dx
-        draggable.y = draggable.y + result.dy
+        local drag_offset_x = result.drag_offset_x
+        local drag_offset_y = result.drag_offset_y
+        if draggable.drag_anchor == "center" then
+          drag_offset_x = draggable.width / 2
+          drag_offset_y = draggable.height / 2
+        end
+        draggable.x = math.min((draggable.constraints.right or 99999) - draggable.width, math.max(draggable.constraints.left or 0, sx - drag_offset_x))
+        draggable.y = math.min((draggable.constraints.bottom or 99999) - draggable.height, math.max(draggable.constraints.top or 0, sy - drag_offset_y))
       end
       if result.drag_end then
         widget_privates[draggable].dragging = false
@@ -386,41 +406,133 @@ local function update(gui)
         draw_resize_cursor(gui, widget_privates[draggable].resize_handle_index, sx, sy)
       end
       if result.was_dragged then
-        local move_x, move_y = dx, dy
-        local start_width, start_height = draggable.width, draggable.height
-        -- This logic still uses the old way of using resize_start_sx - sx to measure how much it has moved etc,
-        -- instead of using the result of render_dragging_widget_at_mouse_pos, but it works so I'm not going to touch it...
-        local width_change = math.floor((resize_start_sx - sx) * -widget_privates[draggable].resize_handle.move[1] * (draggable.resize_symmetrical and 2 or 1) + draggable.resize_granularity / 2)
-        local new_width = resize_start_width + width_change
-        new_width = math.floor(new_width / draggable.resize_granularity) * draggable.resize_granularity
-        local height_change = math.floor((resize_start_sy - sy) * -widget_privates[draggable].resize_handle.move[2] * (draggable.resize_symmetrical and 2 or 1) + draggable.resize_granularity / 2)
-        local new_height = resize_start_height + height_change
-        new_height = math.floor(new_height / draggable.resize_granularity) * draggable.resize_granularity
-        -- move_ will be positive if moving outwards and negative when moving inwards
-        local has_moved = math.abs(width_change) > 0.5 or math.abs(height_change) > 0.5
-        if draggable.resize_uniform then
-          local scale_x = (resize_start_x + resize_start_width * math.max(0, -widget_privates[draggable].resize_handle.move[1]) - sx) * -widget_privates[draggable].resize_handle.move[1] / resize_start_width
-          local scale_y = (resize_start_y + resize_start_height * math.max(0, -widget_privates[draggable].resize_handle.move[2]) - sy) * -widget_privates[draggable].resize_handle.move[2] / resize_start_height
-          local scale = math.max(scale_x, scale_y)
-          -- local scale_granularity = draggable.resize_granularity
-          -- scale = math.floor(scale / scale_granularity) * scale_granularity
-          local scale_min_x = draggable.min_width / resize_start_width
-          local scale_min_y = draggable.min_height / resize_start_height
-          local scale_min = math.max(scale_min_x, scale_min_y)
-          scale = math.max(scale_min, scale)
-          new_width = resize_start_width * scale
-          new_height = resize_start_height * scale
-        end
-        draggable.width = math.max(draggable.min_width, new_width)
-        draggable.height = math.max(draggable.min_height, new_height)
-        move_x = (draggable.width - start_width) * (draggable.resize_symmetrical and 0.5 or 1)
-        move_y = (draggable.height - start_height) * (draggable.resize_symmetrical and 0.5 or 1)
-        draggable.x = draggable.x + move_x * math.min(draggable.resize_symmetrical and -1 or 0, widget_privates[draggable].resize_handle.move[1])
-        draggable.y = draggable.y + move_y * math.min(draggable.resize_symmetrical and -1 or 0, widget_privates[draggable].resize_handle.move[2])
+        local dx = sx - resize_start_sx
+        local dy = sy - resize_start_sy
+        local change_left = dx * -math.min(widget_privates[draggable].resize_handle.move[1], 0)
+        local change_right = dx * math.max(widget_privates[draggable].resize_handle.move[1], 0)
+        local change_top = dy * -math.min(widget_privates[draggable].resize_handle.move[2], 0)
+        local change_bottom = dy * math.max(widget_privates[draggable].resize_handle.move[2], 0)
+
+--[[  HERE BE THE NEW CODE ]]
+
+        -- function update_draggable(draggable, change_left, change_top, change_right, change_bottom)
+        --   return change_left, change_top, change_right, change_bottom
+        -- end
+        -- change_left, change_top, change_right, change_bottom = update_draggable(draggable, change_left, change_top, change_right, change_bottom)
+
+        change_left, change_top, change_right, change_bottom = update_draggable({
+          x = resize_start_x, y = resize_start_y,
+          width = resize_start_width,
+          height = resize_start_height,
+          min_width = draggable.min_width,
+          min_height = draggable.min_height,
+          constraints = draggable.constraints,
+        }, change_left, change_top, change_right, change_bottom)
+
+--[[  /HERE ENDS THE NEW CODE ]]
+        
+        -- if draggable.resize_symmetrical then
+        --   local old_right = change_right
+        --   change_right = change_right - change_left
+        --   change_left = change_left - old_right
+        --   local old_bottom = change_bottom
+        --   change_bottom = change_bottom - change_top
+        --   change_top = change_top - old_bottom
+        -- end
+
+        -- if draggable.resize_uniform then
+        --   local scale_x = (resize_start_x + resize_start_width * math.max(0, -widget_privates[draggable].resize_handle.move[1]) - sx) * -widget_privates[draggable].resize_handle.move[1] / resize_start_width
+        --   local scale_y = (resize_start_y + resize_start_height * math.max(0, -widget_privates[draggable].resize_handle.move[2]) - sy) * -widget_privates[draggable].resize_handle.move[2] / resize_start_height
+        --   local scale = math.max(scale_x, scale_y)
+        --   -- local scale_granularity = draggable.resize_granularity
+        --   -- scale = math.floor(scale / scale_granularity) * scale_granularity
+        --   local scale_min_x = draggable.min_width / resize_start_width
+        --   local scale_min_y = draggable.min_height / resize_start_height
+        --   local scale_min = math.max(scale_min_x, scale_min_y)
+        --   scale = math.max(scale_min, scale)
+        --   new_width = resize_start_width * scale
+        --   new_height = resize_start_height * scale
+        -- end
+
+        -- local change_left_max = resize_start_width - draggable.min_width
+        -- change_left = math.max(change_left, (draggable.constraints.left or -999999) - resize_start_x)
+        -- change_left = math.min(change_left, change_left_max)
+        -- -- change_right = math.min(change_right, (draggable.constraints.right or 999999) - resize_start_x - resize_start_width)
+        -- local change_top_max = resize_start_height - draggable.min_height
+        -- change_top = math.max(change_top, (draggable.constraints.top or -999999) - resize_start_y)
+        -- change_top = math.min(change_top, change_top_max)
+        -- -- change_bottom = math.min(change_bottom, (draggable.constraints.bottom or 999999) - resize_start_y - resize_start_height)
+        -- if draggable.resize_symmetrical then
+        --   local change_left_max = (resize_start_width - draggable.min_width) / 2
+        --   local change_right_min = -(resize_start_width - draggable.min_width) / 2
+        --   change_left = math.min(change_left, change_left_max)
+        --   change_right = math.max(change_right, change_right_min)
+        --   if math.abs(change_left) > math.abs(change_right) then
+        --     change_left = change_right * -1
+        --   else
+        --     change_right = change_left * -1
+        --   end
+
+        --   local change_top_max = (resize_start_height - draggable.min_height) / 2
+        --   local change_bottom_min = -(resize_start_height - draggable.min_height) / 2
+        --   change_top = math.min(change_top, change_top_max)
+        --   change_bottom = math.max(change_bottom, change_bottom_min)
+        --   if math.abs(change_top) > math.abs(change_bottom) then
+        --     change_top = change_bottom * -1
+        --   else
+        --     change_bottom = change_top * -1
+        --   end
+        -- end
+
+        -- if draggable.resize_uniform then
+        --   local scale_x = (resize_start_width + change_right) / resize_start_width
+        --   local scale_y = (resize_start_height + change_bottom) / resize_start_height
+        --   -- local scale = math.max(scale_x, scale_y)
+        --   local aspect_ratio = resize_start_width / resize_start_height
+        --   print(("scale_x(%s)"):format(scale_x - 1 * resize_start_width))
+        --   print(("scale_y(%s)"):format((scale_y - 1) * aspect_ratio * resize_start_height))
+        --   -- print(("scale_x(%s)"):format(math.abs(scale_x - 1) * resize_start_width))
+        --   -- print(("scale_y(%s)"):format(math.abs((scale_y - 1) * aspect_ratio) * resize_start_height))
+        --   local scale = 1
+        --     -- if math.abs(resize_start_width - new_width_) > math.abs(resize_start_height - new_height_) then
+        --   -- if math.max(0, sx - resize_start_sx) > math.max(0, sy - resize_start_sy) then
+        --   -- if math.max(0, math.abs(resize_start_sx - sx)) > math.max(0, math.abs(resize_start_sy - sy)) then
+        --   if (scale_x - 1) * resize_start_width > (scale_y - 1) * resize_start_width then
+        --   -- if (scale_x - 1) * resize_start_width > (scale_y - 1) * resize_start_width then
+        --   -- if math.abs(scale_x - 1) * resize_start_width > math.abs((scale_y - 1) * aspect_ratio) * resize_start_height then
+        --     scale = scale_x
+        --   else
+        --     scale = scale_y
+        --   end
+
+        --   local scale_min_x = draggable.min_width / resize_start_width
+        --   local scale_min_y = draggable.min_height / resize_start_height
+        --   local scale_min = math.max(scale_min_x, scale_min_y)
+
+        --   local scale_max_x = ((draggable.constraints.right or 999999) - resize_start_x) / resize_start_width
+        --   local scale_max_y = ((draggable.constraints.bottom or 999999) - resize_start_y) / resize_start_height
+        --   local scale_max = math.min(scale_max_x, scale_max_y)
+
+        --   -- scale = math.min(scale_max, scale)
+        --   -- scale = math.max(scale_min, scale)
+        --   change_right = resize_start_width * scale - resize_start_width--change_right * scale
+        --   change_bottom = resize_start_height * scale - resize_start_height-- change_bottom * scale
+        --   -- new_width = resize_start_width * scale
+        --   -- new_height = resize_start_height * scale
+        -- end
+
+        -- local new_width = math.max(draggable.min_width, resize_start_width + change_right - change_left)
+        -- local new_height = math.max(draggable.min_height, resize_start_height + change_bottom - change_top)
+
+        draggable.x = resize_start_x + change_left
+        draggable.y = resize_start_y + change_top
+        draggable.width = resize_start_width - change_left + change_right
+        draggable.height = resize_start_height - change_top + change_bottom
+
         -- Recalculate the values
-        local resize_handle_size = 6
         local resize_handles = calculate_handle_props(draggable, resize_handle_size)
         widget_privates[draggable].resize_handle = resize_handles[widget_privates[draggable].resize_handle_index]
+        local has_moved = false --math.abs(width_change) > 0.5 or math.abs(height_change) > 0.5
         if has_moved then
           fire_event(draggable, "resize", { handle_index = widget_privates[draggable].resize_handle_index })
         end
