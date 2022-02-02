@@ -2,6 +2,11 @@ return function(props, change_left, change_top, change_right, change_bottom)
   props.min_width = props.min_width or 0
   props.min_height = props.min_height or 0
   props.asym = not not props.asym
+  props.constraints = props.constraints or { left = -999999, top = -999999, right = 999999, bottom = 999999 }
+
+  local function get_width()
+    return props.width - change_left + change_right
+  end
 
   -- Restrict expansion past contraints
   local function constrain_left()
@@ -22,17 +27,11 @@ return function(props, change_left, change_top, change_right, change_bottom)
   constrain_right()
   constrain_bottom()
 
-  -- Restrict shrinkage
-  change_left = math.min(change_left, props.width)
-  change_top = math.min(change_top, props.height)
-  change_right = math.max(change_right, -props.width)
-  change_bottom = math.max(change_bottom, -props.height)
-
-  -- Restrict to min_ sizes
-  change_left = math.min(change_left, props.width - props.min_width)
-  change_right = math.max(change_right, -(props.width - props.min_width))
-  change_top = math.min(change_top, props.height - props.min_height)
-  change_bottom = math.max(change_bottom, -(props.height - props.min_height))
+  -- Restrict shrinkage to min_ sizes
+  change_left = math.min(change_left, (props.width - props.min_width) / (props.asym and 2 or 1))
+  change_right = math.max(change_right, -(props.width - props.min_width) / (props.asym and 2 or 1))
+  change_top = math.min(change_top, (props.height - props.min_height) / (props.asym and 2 or 1))
+  change_bottom = math.max(change_bottom, -(props.height - props.min_height) / (props.asym and 2 or 1))
 
   if props.asym then
     if math.abs(change_left) > 0 then
