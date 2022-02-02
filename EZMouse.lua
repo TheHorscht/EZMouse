@@ -427,6 +427,7 @@ local function update(gui)
           min_width = draggable.min_width,
           min_height = draggable.min_height,
           constraints = draggable.constraints,
+          asym = true,
         }, change_left, change_top, change_right, change_bottom)
 
 --[[  /HERE ENDS THE NEW CODE ]]
