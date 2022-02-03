@@ -1,3 +1,7 @@
+local function sign(num)
+  return num >= 0 and 1 or -1
+end
+
 return function(props, change_left, change_top, change_right, change_bottom)
   props.min_width = props.min_width or 0
   props.min_height = props.min_height or 0
@@ -26,6 +30,20 @@ return function(props, change_left, change_top, change_right, change_bottom)
   constrain_top()
   constrain_right()
   constrain_bottom()
+
+  if props.quantization then
+    local function round(v)
+      if v > 0 then
+        return math.floor(v)
+      else
+        return math.ceil(v)
+      end
+    end
+    change_left = round(change_left / props.quantization) * props.quantization
+    change_top = round(change_top / props.quantization) * props.quantization
+    change_right = round(change_right / props.quantization) * props.quantization
+    change_bottom = round(change_bottom / props.quantization) * props.quantization
+  end
 
   -- Restrict shrinkage to min_ sizes
   change_left = math.min(change_left, (props.width - props.min_width) / (props.asym and 2 or 1))

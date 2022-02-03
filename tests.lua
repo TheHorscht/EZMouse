@@ -54,6 +54,14 @@ function tprint (tbl, indent)
   end
 end
 
+local function calc_width(props, change_left, change_right)
+  return props.width - change_left + change_right
+end
+
+local function calc_height(props, change_top, change_bottom)
+  return props.height - change_top + change_bottom
+end
+
 -- local expect = dofile("unit_test.lua")
 local function expect(...)
   local values = {...}
@@ -159,6 +167,62 @@ tests["(asym) Resizer stops when opposite side hits constraint"] = function()
   expect(update_draggable(created_merged_table(props, { constraints = { left = 80, right = 200 }}), 0, 0, 100, 0)).to_be(-20, 0, 20, 0)
   expect(update_draggable(created_merged_table(props, { constraints = { bottom = 170, top = 0 }}), 0, -100, 0, 0)).to_be(0, -20, 0, 20)
   expect(update_draggable(created_merged_table(props, { constraints = { bottom = 200, top = 90 }}), 0, 0, 0, 100)).to_be(0, -10, 0, 10)
+end
+
+tests["(quant) Resizing gets quantized"] = function()
+  local props = {
+    quantization = 10,
+    x = 0, y = 0,
+    width = 100, height = 100,
+  }
+  for i=1, 2 do
+    local sign = i == 1 and -1 or 1
+    expect(update_draggable(props,  7 * sign, 0, 0, 0)).to_be(0, 0, 0, 0)
+    expect(update_draggable(props, 13 * sign, 0, 0, 0)).to_be(10 * sign, 0, 0, 0)
+    expect(update_draggable(props, 0,  7 * sign, 0, 0)).to_be(0, 0, 0, 0)
+    expect(update_draggable(props, 0, 13 * sign, 0, 0)).to_be(0, 10 * sign, 0, 0)
+    expect(update_draggable(props, 0, 0,  7 * sign, 0)).to_be(0, 0, 0, 0)
+    expect(update_draggable(props, 0, 0, 13 * sign, 0)).to_be(0, 0, 10 * sign, 0)
+    expect(update_draggable(props, 0, 0, 0,  7 * sign)).to_be(0, 0, 0, 0)
+    expect(update_draggable(props, 0, 0, 0, 13 * sign)).to_be(0, 0, 0, 10 * sign)
+  end
+end
+
+tests["(quant) Hitting constraints respects quantization"] = function()
+  local props = {
+    quantization = 14,
+    x = 100, y = 100,
+    width = 50, height = 50,
+    constraints = { left = 50, top = 50, right = 200, bottom = 200 }
+  }
+  expect(update_draggable(props, -70, 0, 0, 0)).to_be(-42, 0, 0, 0)
+  expect(update_draggable(props, 0, -70, 0, 0)).to_be(0, -42, 0, 0)
+  expect(update_draggable(props, 0, 0, 70, 0)).to_be(0, 0, 42, 0)
+  expect(update_draggable(props, 0, 0, 0, 70)).to_be(0, 0, 0, 42)
+end
+
+tests["(quant) Width and height increase in multiples of quantization"] = function()
+  local props = {
+    quantization = 15,
+    x = 0, y = 0,
+    width = 100, height = 100,
+  }
+  for i=1, 2 do
+    local function test(props, change_left, change_top, change_right, change_bottom)
+      local change_left, change_top, change_right, change_bottom = update_draggable(props, change_left, change_top, change_right, change_bottom)
+      expect((calc_width(props, change_left, change_right) - props.width) % props.quantization).error_level(3).to_be(0)
+      expect((calc_height(props, change_top, change_bottom) - props.height) % props.quantization).error_level(3).to_be(0)
+    end
+    local sign = i == 1 and -1 or 1
+    test(props,  7 * sign, 0, 0, 0)
+    test(props, 13 * sign, 0, 0, 0)
+    test(props, 0,  7 * sign, 0, 0)
+    test(props, 0, 13 * sign, 0, 0)
+    test(props, 0, 0,  7 * sign, 0)
+    test(props, 0, 0, 13 * sign, 0)
+    test(props, 0, 0, 0,  7 * sign)
+    test(props, 0, 0, 0, 13 * sign)
+  end
 end
 
 if count_table_keys(ONLY_tests) > 0 then
