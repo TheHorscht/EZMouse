@@ -238,6 +238,45 @@ tests["(quant) Width and height increase in multiples of quantization"] = functi
   end
 end
 
+-- This should kind of be redundant because of the way more specific tests below, but...
+-- it's probably better to have too many tests than too few
+tests["(aspect) Keeps aspect ratio when resizing"] = function()
+  local props = {
+    x = 0, y = 0,
+    width = 50, height = 150,
+    aspect = true,
+  }
+  local function resize(props, change_left, change_top, change_right, change_bottom)
+    local change_left, change_top, change_right, change_bottom = update_draggable(props, change_left, change_top, change_right, change_bottom)
+    local new_width = calc_width(props, change_left, change_right)
+    local new_height = calc_height(props, change_top, change_bottom)
+    return new_width, new_height
+  end
+  expect(resize(props, -50, 0, 0, 0)).to_be(100, 300)
+  expect(resize(props, 0, -150, 0, 0)).to_be(100, 300)
+  expect(resize(props, 0, 0, 50, 0)).to_be(100, 300)
+  expect(resize(props, 0, 0, 0, 150)).to_be(100, 300)
+  expect(resize(props, 25, 0, 0, 0)).to_be(25, 75)
+  expect(resize(props, 0, 75, 0, 0)).to_be(25, 75)
+  expect(resize(props, 0, 0, -25, 0)).to_be(25, 75)
+  expect(resize(props, 0, 0, 0, -75)).to_be(25, 75)
+end
+
+tests["(aspect) (L,R,U,D) Adjacent sides get resized equally"] = function()
+  local props = {
+    x = 0, y = 0,
+    width = 50, height = 150,
+    aspect = true,
+  }
+  for i=1, 2 do
+    local sign = i == 1 and -1 or 1
+    expect(update_draggable(props, sign * 30, 0, 0, 0)).to_be(sign * 30, feq(sign * 45), 0, feq(sign * -45))
+    expect(update_draggable(props, 0, sign * 30, 0, 0)).to_be(feq(sign * 5), sign * 30, feq(sign * -5), 0)
+    expect(update_draggable(props, 0, 0, sign * 30, 0)).to_be(0, feq(sign * -45), sign * 30, feq(sign * 45))
+    expect(update_draggable(props, 0, 0, 0, sign * 30)).to_be(feq(sign * -5), 0, feq(sign * 5), sign * 30)
+  end
+end
+
 if count_table_keys(ONLY_tests) > 0 then
   print("Only testing: ")
   for test_name, test_func in pairs(ONLY_tests) do

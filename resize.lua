@@ -73,5 +73,22 @@ return function(props, change_left, change_top, change_right, change_bottom)
     end
   end
 
+  if props.aspect then
+    local aspect_ratio = props.width / props.height
+    if math.abs(change_left) > 0 then
+      change_top = change_left / 2 / aspect_ratio
+      change_bottom = -change_left / 2 / aspect_ratio
+    elseif math.abs(change_right) > 0 then
+      change_top = -change_right / 2 / aspect_ratio
+      change_bottom = change_right / 2 / aspect_ratio
+    elseif math.abs(change_top) > 0 then
+      change_left = change_top / 2 * aspect_ratio
+      change_right = -change_top / 2 * aspect_ratio
+    elseif math.abs(change_bottom) > 0 then
+      change_left = -change_bottom / 2 * aspect_ratio
+      change_right = change_bottom / 2 * aspect_ratio
+    end
+  end
+
   return change_left, change_top, change_right, change_bottom
 end
