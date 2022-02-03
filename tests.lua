@@ -57,16 +57,23 @@ end
 -- local expect = dofile("unit_test.lua")
 local function expect(...)
   local values = {...}
-  return {
+  local error_level = 2
+  local out
+  out = {
+    error_level = function(level)
+      error_level = level
+      return out
+    end,
     to_be = function(...)
       local expectation = {...}
       for i, v in ipairs(expectation) do
         if v ~= values[i] then
-          error(("Expected %.2f at [%d], got %.2f"):format(v, i, values[i]), 2)
+          error(("Expected %.2f at [%d], got %.2f"):format(v, i, values[i]), error_level)
         end
       end
     end
   }
+  return out
 end
 
 local tests = {}
