@@ -100,7 +100,18 @@ end
 local tests = {}
 local SKIP_tests = {}
 local ONLY_tests = {}
-tests["Can't resize past constraints"] = function()
+
+local function test(name, func)
+  table.insert(tests, { name = name, func = func })
+end
+local function skip_test(name, func)
+  table.insert(SKIP_tests, { name = name, func = func })
+end
+local function only_test(name, func)
+  table.insert(ONLY_tests, { name = name, func = func })
+end
+
+test("Can't resize past constraints", function()
   local props = {
     x = 50, y = 50,
     width = 20, height = 20,
@@ -110,9 +121,9 @@ tests["Can't resize past constraints"] = function()
   expect(update_draggable(props, 0, -52, 0, 0)).to_be(0, -20, 0, 0)
   expect(update_draggable(props, 0, 0, 53, 0)).to_be(0, 0, 30, 0)
   expect(update_draggable(props, 0, 0, 0, 54)).to_be(0, 0, 0, 30)
-end
+end)
 
-tests["Resizer not moving past the opposite side"] = function()
+test("Resizer not moving past the opposite side", function()
   local props = {
     x = 50, y = 50,
     width = 20, height = 20,
@@ -122,9 +133,9 @@ tests["Resizer not moving past the opposite side"] = function()
   expect(update_draggable(props, 0, 200, 0, 0)).to_be(0, 20, 0, 0)
   expect(update_draggable(props, 0, 0, -200, 0)).to_be(0, 0, -20, 0)
   expect(update_draggable(props, 0, 0, 0, -200)).to_be(0, 0, 0, -20)
-end
+end)
 
-tests["Can't resize smaller than min size"] = function()
+test("Can't resize smaller than min size", function()
   local props2 = {
     x = 100, y = 50,
     width = 30, height = 80,
@@ -135,9 +146,9 @@ tests["Can't resize smaller than min size"] = function()
   expect(update_draggable(props2, 0, 0, -20, 0)).to_be(0, 0, -10, 0)
   expect(update_draggable(props2, 0, 20, 0, 0)).to_be(0, 10, 0, 0)
   expect(update_draggable(props2, 0, 0, 0, -20)).to_be(0, 0, 0, -10)
-end
+end)
 
-tests["(asym) Resizes the opposite side (no constraints)"] = function()
+test("(asym) Resizes the opposite side (no constraints)", function()
   local props3 = {
     x = 100, y = 50,
     width = 50, height = 50,
@@ -153,9 +164,9 @@ tests["(asym) Resizes the opposite side (no constraints)"] = function()
   expect(update_draggable(props3, 0, 20, 0, 0)).to_be(0, 20, 0, -20)
   expect(update_draggable(props3, 0, 0, 20, 0)).to_be(-20, 0, 20, 0)
   expect(update_draggable(props3, 0, 0, 0, 20)).to_be(0, -20, 0, 20)
-end
+end)
 
-tests["(asym) Shrinking stops at min_ sizes"] = function()
+test("(asym) Shrinking stops at min_ sizes", function()
   local props = {
     asym = true,
     x = 100, y = 100,
@@ -166,9 +177,9 @@ tests["(asym) Shrinking stops at min_ sizes"] = function()
   expect(update_draggable(props, 0, 0, -30, 0)).to_be(15, 0, -15, 0)
   expect(update_draggable(props, 0, 30, 0, 0)).to_be(0, 15, 0, -15)
   expect(update_draggable(props, 0, 0, 0, -30)).to_be(0, 15, 0, -15)
-end
+end)
 
-tests["(asym) Resizer stops when opposite side hits constraint"] = function()
+test("(asym) Resizer stops when opposite side hits constraint", function()
   local props = {
     asym = true,
     x = 100, y = 100,
@@ -180,9 +191,9 @@ tests["(asym) Resizer stops when opposite side hits constraint"] = function()
   expect(update_draggable(created_merged_table(props, { constraints = { left = 80, right = 200 }}), 0, 0, 100, 0)).to_be(-20, 0, 20, 0)
   expect(update_draggable(created_merged_table(props, { constraints = { bottom = 170, top = 0 }}), 0, -100, 0, 0)).to_be(0, -20, 0, 20)
   expect(update_draggable(created_merged_table(props, { constraints = { bottom = 200, top = 90 }}), 0, 0, 0, 100)).to_be(0, -10, 0, 10)
-end
+end)
 
-tests["(quant) Resizing gets quantized"] = function()
+test("(quant) Resizing gets quantized", function()
   local props = {
     quantization = 10,
     x = 0, y = 0,
@@ -199,9 +210,9 @@ tests["(quant) Resizing gets quantized"] = function()
     expect(update_draggable(props, 0, 0, 0,  7 * sign)).to_be(0, 0, 0, 0)
     expect(update_draggable(props, 0, 0, 0, 13 * sign)).to_be(0, 0, 0, 10 * sign)
   end
-end
+end)
 
-tests["(quant) Hitting constraints respects quantization"] = function()
+test("(quant) Hitting constraints respects quantization", function()
   local props = {
     quantization = 14,
     x = 100, y = 100,
@@ -212,9 +223,9 @@ tests["(quant) Hitting constraints respects quantization"] = function()
   expect(update_draggable(props, 0, -70, 0, 0)).to_be(0, -42, 0, 0)
   expect(update_draggable(props, 0, 0, 70, 0)).to_be(0, 0, 42, 0)
   expect(update_draggable(props, 0, 0, 0, 70)).to_be(0, 0, 0, 42)
-end
+end)
 
-tests["(quant) Width and height increase in multiples of quantization"] = function()
+test("(quant) Width and height increase in multiples of quantization", function()
   local props = {
     quantization = 15,
     x = 0, y = 0,
@@ -236,11 +247,11 @@ tests["(quant) Width and height increase in multiples of quantization"] = functi
     test(props, 0, 0, 0,  7 * sign)
     test(props, 0, 0, 0, 13 * sign)
   end
-end
+end)
 
 -- This should kind of be redundant because of the way more specific tests below, but...
 -- it's probably better to have too many tests than too few
-tests["(aspect) Keeps aspect ratio when resizing"] = function()
+test("(aspect) Keeps aspect ratio when resizing", function()
   local props = {
     x = 0, y = 0,
     width = 50, height = 150,
@@ -260,9 +271,9 @@ tests["(aspect) Keeps aspect ratio when resizing"] = function()
   expect(resize(props, 0, 75, 0, 0)).to_be(25, 75)
   expect(resize(props, 0, 0, -25, 0)).to_be(25, 75)
   expect(resize(props, 0, 0, 0, -75)).to_be(25, 75)
-end
+end)
 
-tests["(aspect) (L,R,U,D) Adjacent sides get resized equally"] = function()
+test("(aspect) (L,R,U,D) Adjacent sides get resized equally", function()
   local props = {
     x = 0, y = 0,
     width = 50, height = 150,
@@ -275,27 +286,29 @@ tests["(aspect) (L,R,U,D) Adjacent sides get resized equally"] = function()
     expect(update_draggable(props, 0, 0, sign * 30, 0)).to_be(0, feq(sign * -45), sign * 30, feq(sign * 45))
     expect(update_draggable(props, 0, 0, 0, sign * 30)).to_be(feq(sign * -5), 0, feq(sign * 5), sign * 30)
   end
-end
+end)
 
-if count_table_keys(ONLY_tests) > 0 then
-  print("Only testing: ")
-  for test_name, test_func in pairs(ONLY_tests) do
-    local success, result = pcall(test_func)
+if #ONLY_tests > 0 then
+  print("\27[93mOnly testing:\27[0m")
+  for i, test in ipairs(ONLY_tests) do
+    local success, result = pcall(test.func)
     if not success then
-      print(test_name .. " failed: " .. result)
+      print("\27[31m(FAIL)\27[0m - " .. test.name .. " failed: " .. result)
+    else
+      print("\27[92m(SUCCESS)\27[0m - " .. test.name)
     end
   end
 else
-  for test_name, test_func in pairs(SKIP_tests) do
-    print("Skipped test: '" .. test_name .. "'")
+  for i, test in ipairs(SKIP_tests) do
+    print("\27[93m(SKIPPED)\27[0m - " .. test.name)
   end
   
-  for test_name, test_func in pairs(tests) do
-    local success, result = pcall(test_func)
+  for i, test in pairs(tests) do
+    local success, result = pcall(test.func)
     if not success then
-      print("\27[31m(FAIL)\27[0m - " .. test_name .. " failed: " .. result)
+      print("\27[31m(FAIL)\27[0m - " .. test.name .. " failed: " .. result)
     else
-      print("\27[92m(SUCCESS)\27[0m - " .. test_name)
+      print("\27[92m(SUCCESS)\27[0m - " .. test.name)
     end
   end
 end
