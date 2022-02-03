@@ -11,6 +11,14 @@ local update_draggable = dofile("resize.lua")
 --   end
 --   return t
 -- end
+local function count_table_keys(t)
+  local num_keys = 0
+  for k, v in pairs(t) do
+    num_keys = num_keys + 1
+  end
+  return num_keys
+end
+
 local function created_merged_table(t1, t2)
   local t = {}
   for k, v in pairs(t1) do
@@ -63,6 +71,7 @@ end
 
 local tests = {}
 local SKIP_tests = {}
+local ONLY_tests = {}
 tests["Can't resize past constraints"] = function()
   local props = {
     x = 50, y = 50,
@@ -145,13 +154,25 @@ tests["(asym) Resizer stops when opposite side hits constraint"] = function()
   expect(update_draggable(created_merged_table(props, { constraints = { bottom = 200, top = 90 }}), 0, 0, 0, 100)).to_be(0, -10, 0, 10)
 end
 
-for test_name, test_func in pairs(SKIP_tests) do
-  print("Skipped test: '" .. test_name .. "'")
-end
-
-for test_name, test_func in pairs(tests) do
-  local success, result = pcall(test_func)
-  if not success then
-    print(test_name .. " failed: " .. result)
+if count_table_keys(ONLY_tests) > 0 then
+  print("Only testing: ")
+  for test_name, test_func in pairs(ONLY_tests) do
+    local success, result = pcall(test_func)
+    if not success then
+      print(test_name .. " failed: " .. result)
+    end
+  end
+else
+  for test_name, test_func in pairs(SKIP_tests) do
+    print("Skipped test: '" .. test_name .. "'")
+  end
+  
+  for test_name, test_func in pairs(tests) do
+    local success, result = pcall(test_func)
+    if not success then
+      print("\27[31m(FAIL)\27[0m - " .. test_name .. " failed: " .. result)
+    else
+      print("\27[92m(SUCCESS)\27[0m - " .. test_name)
+    end
   end
 end
