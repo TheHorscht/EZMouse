@@ -62,7 +62,16 @@ local function calc_height(props, change_top, change_bottom)
   return props.height - change_top + change_bottom
 end
 
--- local expect = dofile("unit_test.lua")
+-- float equals
+local function feq(v1)
+  return {
+    value = v1,
+    func = function(v2)
+      return math.abs(v1 - v2) < 0.001
+    end
+  }
+end
+
 local function expect(...)
   local values = {...}
   local error_level = 2
@@ -75,7 +84,11 @@ local function expect(...)
     to_be = function(...)
       local expectation = {...}
       for i, v in ipairs(expectation) do
-        if v ~= values[i] then
+        if type(v) == "table" and v.func then
+          if not v.func(values[i])  then
+            error(("Expected %.2f at [%d], got %.2f"):format(v.value, i, values[i]), error_level)
+          end
+        elseif v ~= values[i] then
           error(("Expected %.2f at [%d], got %.2f"):format(v, i, values[i]), error_level)
         end
       end
