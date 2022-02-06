@@ -420,6 +420,13 @@ local function update(gui)
         -- end
         -- change_left, change_top, change_right, change_bottom = update_draggable(draggable, change_left, change_top, change_right, change_bottom)
 
+        if ComponentGetValue2(controls_component, "mButtonDownInteract") then
+          change_left = 0
+        end
+        GlobalsSetValue("change_left", change_left)
+        GlobalsSetValue("change_top", change_top)
+        GlobalsSetValue("change_right", change_right)
+        GlobalsSetValue("change_bottom", change_bottom)
         change_left, change_top, change_right, change_bottom = update_draggable({
           x = resize_start_x, y = resize_start_y,
           width = resize_start_width,
@@ -430,7 +437,7 @@ local function update(gui)
           -- asym = true,
           -- quantization = 20,
           aspect = true,
-        }, change_left, change_top, change_right, change_bottom)
+        }, change_left, change_top, change_right, change_bottom, widget_privates[draggable].resize_handle_index)
 
 --[[  /HERE ENDS THE NEW CODE ]]
         

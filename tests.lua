@@ -1,5 +1,7 @@
 local update_draggable = dofile("resize.lua")
 
+GlobalsSetValue = function() end
+
 -- local function created_merged_table(t1, t2)
 --   local t = {}
 --   for k, v in pairs(t2) do
@@ -281,11 +283,81 @@ test("(aspect) (L,R,U,D) Adjacent sides get resized equally", function()
   }
   for i=1, 2 do
     local sign = i == 1 and -1 or 1
-    expect(update_draggable(props, sign * 30, 0, 0, 0)).to_be(sign * 30, feq(sign * 45), 0, feq(sign * -45))
-    expect(update_draggable(props, 0, sign * 30, 0, 0)).to_be(feq(sign * 5), sign * 30, feq(sign * -5), 0)
-    expect(update_draggable(props, 0, 0, sign * 30, 0)).to_be(0, feq(sign * -45), sign * 30, feq(sign * 45))
-    expect(update_draggable(props, 0, 0, 0, sign * 30)).to_be(feq(sign * -5), 0, feq(sign * 5), sign * 30)
+    expect(update_draggable(props, sign * 30, 0, 0, 0, 8)).to_be(feq(sign * 30), feq(sign * 45), 0, feq(sign * -45))
+    expect(update_draggable(props, 0, sign * 30, 0, 0, 2)).to_be(feq(sign * 5), feq(sign * 30), feq(sign * -5), 0)
+    expect(update_draggable(props, 0, 0, sign * 30, 0, 4)).to_be(0, feq(sign * -45), feq(sign * 30), feq(sign * 45))
+    expect(update_draggable(props, 0, 0, 0, sign * 30, 6)).to_be(feq(sign * -5), 0, feq(sign * 5), feq(sign * 30))
   end
+  expect(update_draggable(props, 0, 0, 0, 0)).to_be(0, 0, 0, 0)
+end)
+
+test("(aspect) Diagonal resizing", function()
+  local props = {
+    x = 0, y = 0,
+    width = 50, height = 150,
+    aspect = true,
+  }
+  local ratio = props.height / props.width
+  -- The shorter side that gets resized should take precedence because it takes less absolute movement to scale it
+
+  -- Top left corner
+  expect(update_draggable(props, -10, -10, 0, 0, 1)).to_be(feq(-10),       feq(-10*ratio), 0, 0)
+  expect(update_draggable(props,  10,  10, 0, 0, 1)).to_be(feq( 10/ratio), feq( 10),       0, 0)
+  expect(update_draggable(props, -10,  10, 0, 0, 1)).to_be(feq(-10),       feq(-10*ratio), 0, 0)
+  expect(update_draggable(props,  10, -10, 0, 0, 1)).to_be(feq(-10/ratio), feq(-10),       0, 0)
+  expect(update_draggable(props, -10,   0, 0, 0, 1)).to_be(feq(-10),       feq(-10*ratio), 0, 0)
+  expect(update_draggable(props,  10,   0, 0, 0, 1)).to_be(0, 0, 0, 0)
+  expect(update_draggable(props,   0, -10, 0, 0, 1)).to_be(feq(-10/ratio), feq(-10),       0, 0)
+  expect(update_draggable(props,   0,  10, 0, 0, 1)).to_be(0, 0, 0, 0)
+  
+  -- Top right corner
+  expect(update_draggable(props, 0, -10, -10, 0, 3)).to_be(0, feq(-10),       feq( 10/ratio), 0)
+  expect(update_draggable(props, 0,  10,  10, 0, 3)).to_be(0, feq(-10*ratio), feq( 10), 0)
+  expect(update_draggable(props, 0, -10,  10, 0, 3)).to_be(0, feq(-10*ratio), feq( 10), 0)
+  expect(update_draggable(props, 0,  10, -10, 0, 3)).to_be(0, feq( 10),       feq(-10/ratio), 0)
+  expect(update_draggable(props, 0, -10,   0, 0, 3)).to_be(0, feq(-10),       feq( 10/ratio), 0)
+  expect(update_draggable(props, 0,  10,   0, 0, 3)).to_be(0, 0, 0, 0)
+  expect(update_draggable(props, 0,   0, -10, 0, 3)).to_be(0, 0, 0, 0)
+  expect(update_draggable(props, 0,   0,  10, 0, 3)).to_be(0, feq(-10*ratio), feq( 10), 0)
+
+  -- Bottom right corner
+  expect(update_draggable(props, 0, 0, -10, -10, 5)).to_be(0, 0, feq(-10/ratio), feq(-10))
+  expect(update_draggable(props, 0, 0,  10,  10, 5)).to_be(0, 0, feq( 10),       feq( 10*ratio))
+  expect(update_draggable(props, 0, 0, -10,  10, 5)).to_be(0, 0, feq( 10/ratio), feq( 10))
+  expect(update_draggable(props, 0, 0,  10, -10, 5)).to_be(0, 0, feq( 10),       feq( 10*ratio))
+  expect(update_draggable(props, 0, 0, -10,   0, 5)).to_be(0, 0, 0, 0)
+  expect(update_draggable(props, 0, 0,  10,   0, 5)).to_be(0, 0, feq( 10),       feq( 10*ratio))
+  expect(update_draggable(props, 0, 0,   0, -10, 5)).to_be(0, 0, 0, 0)
+  expect(update_draggable(props, 0, 0,   0,  10, 5)).to_be(0, 0, feq( 10/ratio), feq( 10))
+  
+  -- Bottom left corner
+  expect(update_draggable(props, -10, 0, 0, -10, 7)).to_be(feq(-10), 0, 0, feq( 10*ratio))
+  expect(update_draggable(props,  10, 0, 0,  10, 7)).to_be(feq(-10/ratio), 0, 0, feq(10))
+  expect(update_draggable(props, -10, 0, 0,  10, 7)).to_be(feq(-10), 0, 0, feq( 10*ratio))
+  expect(update_draggable(props,  10, 0, 0, -10, 7)).to_be(feq( 10/ratio), 0, 0, feq(-10))
+  expect(update_draggable(props, -10, 0, 0,   0, 7)).to_be(feq(-10), 0, 0, feq( 10*ratio))
+  expect(update_draggable(props,  10, 0, 0,   0, 7)).to_be(0, 0, 0, 0)
+  expect(update_draggable(props,   0, 0, 0, -10, 7)).to_be(0, 0, 0, 0)
+  expect(update_draggable(props,   0, 0, 0,  10, 7)).to_be(feq(-10/ratio), 0, 0, feq( 10))
+end)
+
+test("(aspect) Resizes based on the bigger size", function()
+  local props = {
+    x = 0, y = 0,
+    width = 50, height = 100,
+    aspect = true,
+  }
+  expect(update_draggable(props, 0, 0, -10, 0, 3)).to_be(0, 0, 0, 0)
+end)
+
+test("(aspect) Does not jump when resizing", function()
+  local props = {
+    x = 0, y = 0,
+    width = 50, height = 100,
+    aspect = true,
+  }
+  expect(update_draggable(props, 0, -42, -18, 0, 3)).to_be(0, feq(-42), feq(21), 0)
+  expect(update_draggable(props, 0, -42, -22, 0, 3)).to_be(0, feq(-42), feq(21), 0)
 end)
 
 if #ONLY_tests > 0 then
