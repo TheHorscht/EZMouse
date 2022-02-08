@@ -8,11 +8,11 @@ return function(props, change_left, change_top, change_right, change_bottom, cor
   props.asym = not not props.asym
   props.constraints = props.constraints or { left = -999999, top = -999999, right = 999999, bottom = 999999 }
 
-  local function get_new_width()
+  local function get_width(change_left, change_right)
     return props.width - change_left + change_right
   end
 
-  local function get_new_height()
+  local function get_height(change_top, change_bottom)
     return props.height - change_top + change_bottom
   end
 
@@ -105,8 +105,9 @@ return function(props, change_left, change_top, change_right, change_bottom, cor
       origin_of_scaling_x = props.width
       origin_of_scaling_y = props.height / 2
     end
-    local scale_x = get_new_width() / props.width
-    local scale_y = get_new_height() / props.height
+
+    local scale_x = get_width(change_left, change_right) / props.width
+    local scale_y = get_height(change_top, change_bottom) / props.height
 
     if scale_x ~= 1 or scale_y ~= 1 then
       local scale_x_percent, scale_y_percent = origin_of_scaling_x / props.width, origin_of_scaling_y / props.height
