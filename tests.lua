@@ -74,6 +74,23 @@ local function feq(v1)
   }
 end
 
+local function varg_to_string(...)
+  local vargs = type(...) == "table" and ... or {...}
+  local str = "("
+  for i, v in ipairs(vargs) do
+    if type(v) == "table" then
+      str = str .. string.format("%.2f", v.value)
+    else
+      str = str .. string.format("%.2f", v)
+    end
+    if next(vargs, i) then
+      str = str .. ", "
+    end
+  end
+  str = str .. ")"
+  return str
+end
+
 local function expect(...)
   local values = {...}
   local error_level = 2
@@ -88,10 +105,10 @@ local function expect(...)
       for i, v in ipairs(expectation) do
         if type(v) == "table" and v.func then
           if not v.func(values[i])  then
-            error(("Expected %.2f at [%d], got %.2f"):format(v.value, i, values[i]), error_level)
+            error(("Expected %s, got %s"):format(varg_to_string(expectation), varg_to_string(values)), error_level)
           end
         elseif v ~= values[i] then
-          error(("Expected %.2f at [%d], got %.2f"):format(v, i, values[i]), error_level)
+          error(("Expected %s, got %s"):format(varg_to_string(expectation), varg_to_string(values)), error_level)
         end
       end
     end
@@ -360,27 +377,52 @@ test("(aspect) Does not jump when resizing", function()
   expect(update_draggable(props, 0, -42, -22, 0, 3)).to_be(0, feq(-42), feq(21), 0)
 end)
 
+
+-- ########################
+-- ##### END OF TESTS #####
+-- ########################
+
 if #ONLY_tests > 0 then
   print("\27[93mOnly testing:\27[0m")
+  local passed_tests = {}
+  local failed_tests = {}
   for i, test in ipairs(ONLY_tests) do
     local success, result = pcall(test.func)
     if not success then
-      print("\27[31m(FAIL)\27[0m - " .. test.name .. " failed: " .. result)
+      table.insert(failed_tests, { test_name = test.name, error_message = result })
     else
-      print("\27[92m(SUCCESS)\27[0m - " .. test.name)
+      table.insert(passed_tests, { test_name = test.name })
     end
   end
+  if #passed_tests > 0 then
+    print(("\27[92m%d/%d\27[0m test(s) passed."):format(#passed_tests, #ONLY_tests))
+  end
+  if #failed_tests > 0 then
+    print(("\27[31m%d/%d\27[0m test(s) failed."):format(#failed_tests, #ONLY_tests))
+  end
 else
+  local passed_tests = {}
+  local failed_tests = {}
+  local num_skipped = 0
   for i, test in ipairs(SKIP_tests) do
-    print("\27[93m(SKIPPED)\27[0m - " .. test.name)
+    num_skipped = num_skipped + 1
   end
   
   for i, test in pairs(tests) do
     local success, result = pcall(test.func)
     if not success then
-      print("\27[31m(FAIL)\27[0m - " .. test.name .. " failed: " .. result)
+      table.insert(failed_tests, { test_name = test.name, error_message = result })
     else
-      print("\27[92m(SUCCESS)\27[0m - " .. test.name)
+      table.insert(passed_tests, { test_name = test.name })
     end
+  end
+  if #passed_tests > 0 then
+    print(("\27[92m%d/%d\27[0m test(s) passed."):format(#passed_tests, #tests))
+  end
+  if num_skipped > 0 then
+    print(("\27[93m%d\27[0m test(s) skipped."):format(num_skipped))
+  end
+  for i, test in ipairs(failed_tests) do
+    print(("\27[31m(FAIL)\27[0m %s || %s"):format(test.test_name, test.error_message))
   end
 end
