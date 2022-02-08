@@ -13,6 +13,11 @@ return function(props, change_left, change_top, change_right, change_bottom, cor
   props.asym = not not props.asym
   props.constraints = props.constraints or { left = -999999, top = -999999, right = 999999, bottom = 999999 }
 
+  local change_left_min = props.constraints.left - props.x
+  local change_top_min = props.constraints.top - props.y
+  local change_right_max = props.constraints.right - (props.x + props.width)
+  local change_bottom_max = props.constraints.bottom - (props.y + props.height)
+
   local function get_width(change_left, change_right)
     return props.width - change_left + change_right
   end
@@ -23,16 +28,16 @@ return function(props, change_left, change_top, change_right, change_bottom, cor
 
   -- Restrict expansion past contraints
   local function constrain_left()
-    return math.max(props.x + change_left, props.constraints.left) - props.x
+    return math.max(change_left_min, change_left)
   end
   local function constrain_top()
-    return math.max(props.y + change_top, props.constraints.top) - props.y
+    return math.max(change_top_min, change_top)
   end
   local function constrain_right()
-    return math.min(props.x + change_right, props.constraints.right - props.width) - props.x
+    return math.min(change_right_max, change_right)
   end
   local function constrain_bottom()
-    return math.min(props.y + change_bottom, props.constraints.bottom - props.height) - props.y
+    return math.min(change_bottom_max, change_bottom)
   end
 
   change_left = constrain_left()
