@@ -142,75 +142,34 @@ return function(props, change_left, change_top, change_right, change_bottom, cor
       change_right = (1 - scale_x_percent) * -props.width * (1 - scale)
       change_bottom = (1 - scale_y_percent) * -props.height * (1 - scale)
 
-      -- local change_left_after_constraint = constrain_left()
-      -- local change_top_after_constraint = constrain_top()
-      -- local change_right_after_constraint = constrain_right()
-      -- local change_bottom_after_constraint = constrain_bottom()
+      local change_left_scaled = constrain_left() / change_left
+      local change_top_scaled = constrain_top() / change_top
+      local change_right_scaled = constrain_right() / change_right
+      local change_bottom_scaled = constrain_bottom() / change_bottom
 
-      -- If the change is different after constraining, the value will be different than 0
-      -- local scales_after_constraint = {
-      --   (change_left - constrain_left()),
-      --   (change_top - constrain_top()),
-      --   (change_right - constrain_right()),
-      --   (change_bottom - constrain_bottom()),
-      -- }
-      -- If left was constrained, also constrain right to the same value, etc
-      GlobalsSetValue("debug_value_1", change_left)
-      GlobalsSetValue("debug_value_2", change_top)
-      GlobalsSetValue("debug_value_3", change_right)
-      GlobalsSetValue("debug_value_4", change_bottom)
-      local function was_left_constrained()
-        return not feq(constrain_left(), change_left)
-      end
-      local function was_left_changed()
-        return not feq(change_left, 0)
-      end
-      local function was_top_constrained()
-        return not feq(constrain_top(), change_top)
-      end
-      local function was_top_changed()
-        return not feq(change_top, 0)
-      end
-      local function was_right_constrained()
-        return not feq(constrain_right(), change_right)
-      end
-      local function was_right_changed()
-        return not feq(change_right, 0)
-      end
-      local function was_bottom_constrained()
-        return not feq(constrain_bottom(), change_bottom)
-      end
-      local function was_bottom_changed()
-        return not feq(change_bottom, 0)
-      end
-      if was_left_constrained() and was_right_changed() then
-        change_left = constrain_left()
-        change_right = -constrain_left()
-      elseif was_right_constrained() and was_left_changed() then
-        change_left = -constrain_right()
-        change_right = constrain_right()
-      end
-      if was_top_constrained() and was_bottom_changed() then
-        change_top = constrain_top()
-        change_bottom = -constrain_top()
-      elseif was_bottom_constrained() and was_top_changed() then
-        change_top = -constrain_bottom()
-        change_bottom = constrain_bottom()
+      local function is_nan(value)
+        return value ~= value
       end
 
-      -- NEW!!!
-      if was_left_constrained() and was_top_changed() then
+      if is_nan(change_left_scaled) then
+        change_left_scaled = 1
+      end
+      if is_nan(change_top_scaled) then
+        change_top_scaled = 1
+      end
+      if is_nan(change_right_scaled) then
+        change_right_scaled = 1
+      end
+      if is_nan(change_bottom_scaled) then
+        change_bottom_scaled = 1
       end
 
-      local scale_x = get_width(change_left, change_right) / props.width
-      local scale_y = get_height(change_top, change_bottom) / props.height
-      -- GlobalsSetValue("debug_value_3", scale_x)
-      -- GlobalsSetValue("debug_value_4", scale_y)
-      scale = math.min(scale_x, scale_y)
-      change_left = scale_x_percent * props.width * (1 - scale)
-      change_top = scale_y_percent * props.height * (1 - scale)
-      change_right = (1 - scale_x_percent) * -props.width * (1 - scale)
-      change_bottom = (1 - scale_y_percent) * -props.height * (1 - scale)
+      local new_scale = math.min(change_left_scaled, change_top_scaled, change_right_scaled, change_bottom_scaled)
+
+      change_left = change_left * new_scale
+      change_top = change_top * new_scale
+      change_right = change_right * new_scale
+      change_bottom = change_bottom * new_scale
     end
   end
 

@@ -398,8 +398,6 @@ test("(aspect) Constraints work resizing diagonally", function()
   }
   expect(update_draggable(props, -10, 0, 0, 0, 1)).to_be(feq(-5), feq(-10), 0, 0)
   expect(update_draggable(props, 0, -10, 0, 0, 1)).to_be(feq(-5), feq(-10), 0, 0)
-  -- expect(update_draggable(props, 0, -25, 0, 0, 1)).to_be(0, 0, 0, 0)
-  -- expect(update_draggable(props, 0, -100, 0, 0, 3)).to_be(-50, -50, 50, 0)
   -- TODO: More comprehensive testing...
 end)
 
