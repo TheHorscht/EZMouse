@@ -377,6 +377,31 @@ test("(aspect) Does not jump when resizing", function()
   expect(update_draggable(props, 0, -42, -22, 0, 3)).to_be(0, feq(-42), feq(21), 0)
 end)
 
+test("(aspect) Constraints work when secondary sides hit them", function()
+  local props = {
+    x = 50, y = 50,
+    width = 50, height = 100,
+    aspect = true,
+    constraints = { left = 0, top = 0, right = 200, bottom = 175, }
+  }
+  expect(update_draggable(created_merged_table(props, { width = 50, height = 100 }), -25, 0, 0, 0, 8)).to_be(-25, -25, 0, 25)
+  expect(update_draggable(created_merged_table(props, { width = 100, height = 50 }), 0, -100, 0, 0, 2)).to_be(-50, -50, 50, 0)
+  -- TODO: More comprehensive testing...
+end)
+
+test("(aspect) Constraints work resizing diagonally", function()
+  local props = {
+    x = 10, y = 10,
+    width = 50, height = 100,
+    aspect = true,
+    constraints = { left = 0, top = 0, right = 200, bottom = 175, }
+  }
+  expect(update_draggable(props, -10, 0, 0, 0, 1)).to_be(feq(-5), feq(-10), 0, 0)
+  expect(update_draggable(props, 0, -10, 0, 0, 1)).to_be(feq(-5), feq(-10), 0, 0)
+  -- expect(update_draggable(props, 0, -25, 0, 0, 1)).to_be(0, 0, 0, 0)
+  -- expect(update_draggable(props, 0, -100, 0, 0, 3)).to_be(-50, -50, 50, 0)
+  -- TODO: More comprehensive testing...
+end)
 
 -- ########################
 -- ##### END OF TESTS #####
