@@ -422,8 +422,8 @@ if #ONLY_tests > 0 then
   if #passed_tests > 0 then
     print(("\27[92m%d/%d\27[0m test(s) passed."):format(#passed_tests, #ONLY_tests))
   end
-  if #failed_tests > 0 then
-    print(("\27[31m%d/%d\27[0m test(s) failed."):format(#failed_tests, #ONLY_tests))
+  for i, test in ipairs(failed_tests) do
+    print(("\27[31m(FAIL)\27[0m %s || %s"):format(test.test_name, test.error_message))
   end
 else
   local passed_tests = {}
