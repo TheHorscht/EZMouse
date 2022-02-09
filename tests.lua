@@ -74,12 +74,25 @@ local function feq(v1)
   }
 end
 
+local function not_nan()
+  return {
+    value = "'not nan'",
+    func = function(value)
+      return not (value ~= value)
+    end
+  }
+end
+
 local function varg_to_string(...)
   local vargs = type(...) == "table" and ... or {...}
   local str = "("
   for i, v in ipairs(vargs) do
     if type(v) == "table" then
-      str = str .. string.format("%.2f", v.value)
+      if type(v.value) == "number" then
+        str = str .. string.format("%.2f", v.value)
+      else
+        str = str .. string.format("%s", v.value)
+      end
     else
       str = str .. string.format("%.2f", v)
     end
