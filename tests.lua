@@ -401,6 +401,31 @@ test("(aspect) Constraints work resizing diagonally", function()
   -- TODO: More comprehensive testing...
 end)
 
+test("(aspect) Min sizes get respected when resizing", function()
+  local props = {
+    x = 10, y = 10,
+    width = 50, height = 100,
+    min_width = 25, min_height = 25,
+    aspect = true,
+  }
+  expect(update_draggable(created_merged_table(props, { min_height = 25 }), 0, 100, 0, 0, 2)).to_be(feq(12.50), feq(50), feq(-12.50), 0)
+  expect(update_draggable(created_merged_table(props, { min_height = 35 }), 0, 100, 0, 0, 2)).to_be(feq(12.50), feq(50), feq(-12.50), 0)
+  
+  local function test(props, change_left, change_top, change_right, change_bottom, resize_handle_index)
+    local change_left, change_top, change_right, change_bottom = update_draggable(props, change_left, change_top, change_right, change_bottom, resize_handle_index)
+    expect(calc_width(props, change_left, change_right)).error_level(3).to_be(25)
+    expect(calc_height(props, change_top, change_bottom)).error_level(3).to_be(50)
+  end
+  test(props, 100, 100, 0, 0, 1)
+  test(props, 0, 100, 0, 0, 2)
+  test(props, 0, 100, -100, 0, 3)
+  test(props, 0, 0, -100, 0, 4)
+  test(props, 0, 0, -100, -100, 5)
+  test(props, 0, 0, 0, -100, 6)
+  test(props, 100, 0, 0, -100, 7)
+  test(props, 100, 0, 0, 0, 8)
+end)
+
 -- ########################
 -- ##### END OF TESTS #####
 -- ########################

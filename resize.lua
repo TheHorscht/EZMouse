@@ -40,6 +40,17 @@ return function(props, change_left, change_top, change_right, change_bottom, cor
     return math.min(change_bottom_max, change_bottom)
   end
 
+  -- "Fix" aspect ratio for min sizes, if we use aspect mode and the aspect ratio for min sizes is different from width/height
+  -- Better way would probably be to throw an error instead of silently fixing the "mistake"
+  if props.aspect then
+    local ratio = props.width / props.height
+    if props.width > props.height then
+      props.min_width = props.min_height * ratio
+    else
+      props.min_height = props.min_width / ratio
+    end
+  end
+
   change_left = constrain_left()
   change_top = constrain_top()
   change_right = constrain_right()
@@ -58,6 +69,8 @@ return function(props, change_left, change_top, change_right, change_bottom, cor
     change_right = round(change_right / props.quantization) * props.quantization
     change_bottom = round(change_bottom / props.quantization) * props.quantization
   end
+
+  -- THis only restricts the INITIAL changes, not the ones made after aspect ratio scaling
 
   -- Restrict shrinkage to min_ sizes
   change_left = math.min(change_left, (props.width - props.min_width) / (props.asym and 2 or 1))
@@ -166,10 +179,17 @@ return function(props, change_left, change_top, change_right, change_bottom, cor
 
       local new_scale = math.min(change_left_scaled, change_top_scaled, change_right_scaled, change_bottom_scaled)
 
-      change_left = change_left * new_scale
-      change_top = change_top * new_scale
-      change_right = change_right * new_scale
-      change_bottom = change_bottom * new_scale
+      local new_width = get_width(change_left * new_scale, change_right * new_scale)
+      local new_height = get_height(change_top * new_scale, change_bottom * new_scale)
+      -- If it's smaller than 1 we need to scale up back to 1
+      local min_width_constraint_scale = math.min(1, new_width / props.min_width)
+      local min_height_constraint_scale = math.min(1, new_height / props.min_height)
+      local min_size_constraint_scale = math.min(min_width_constraint_scale, min_height_constraint_scale)
+
+      change_left = change_left * new_scale / min_size_constraint_scale
+      change_top = change_top * new_scale / min_size_constraint_scale
+      change_right = change_right * new_scale / min_size_constraint_scale
+      change_bottom = change_bottom * new_scale / min_size_constraint_scale
     end
   end
 
