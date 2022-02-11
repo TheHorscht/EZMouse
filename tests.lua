@@ -107,21 +107,33 @@ end
 local function expect(...)
   local values = {...}
   local error_level = 2
+  local info
   local out
   out = {
     error_level = function(level)
       error_level = level
       return out
     end,
+    info = function(msg)
+      info = msg
+      return out
+    end,
     to_be = function(...)
       local expectation = {...}
+      local function throw_error()
+        local error_message = ("Expected %s, got %s"):format(varg_to_string(expectation), varg_to_string(values))
+        if info then
+          error_message = "Info("..info..") " .. error_message
+        end
+        error(error_message, error_level + 1)
+      end
       for i, v in ipairs(expectation) do
         if type(v) == "table" and v.func then
           if not v.func(values[i])  then
-            error(("Expected %s, got %s"):format(varg_to_string(expectation), varg_to_string(values)), error_level)
+            throw_error()
           end
         elseif v ~= values[i] then
-          error(("Expected %s, got %s"):format(varg_to_string(expectation), varg_to_string(values)), error_level)
+          throw_error()
         end
       end
     end
