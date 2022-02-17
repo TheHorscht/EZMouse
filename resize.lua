@@ -12,7 +12,7 @@ return function(props, change_left, change_top, change_right, change_bottom, cor
   props.min_height = props.min_height or 1
   props.max_width = props.max_width or 999999
   props.max_height = props.max_height or 999999
-  props.asym = not not props.asym
+  props.symmetrical = not not props.symmetrical
   props.constraints = props.constraints or { left = -999999, top = -999999, right = 999999, bottom = 999999 }
 
   local resize_horizontally = false
@@ -110,7 +110,7 @@ return function(props, change_left, change_top, change_right, change_bottom, cor
     -- if props.aspect then
     --   min_scale_to_use = 
     -- end
-    if props.asym then
+    if props.symmetrical then
       min_scale_to_use = math.min(min_scale_left, min_scale_right) * 1.75
       max_scale_to_use = math.min(max_scale_left, max_scale_right)
     end
@@ -118,13 +118,13 @@ return function(props, change_left, change_top, change_right, change_bottom, cor
     scale_x = math.min(scale_x, max_scale_to_use)
     scale_x = math.max(scale_x, 0)
     change_left = props.width * (1 - scale_x)
-    if props.asym then
+    if props.symmetrical then
       change_right = props.width * -(1 - scale_x)
     end
   elseif corner == 3 or corner == 4 or corner == 5 then
     local min_scale_to_use = min_scale_right
     local max_scale_to_use = max_scale_right
-    if props.asym then
+    if props.symmetrical then
       min_scale_to_use = math.min(min_scale_right, min_scale_left) * 1.75
       max_scale_to_use = math.min(max_scale_right, max_scale_left)
     end
@@ -132,14 +132,14 @@ return function(props, change_left, change_top, change_right, change_bottom, cor
     scale_x = math.min(scale_x, max_scale_to_use)
     scale_x = math.max(scale_x, 0)
     change_right = props.width * -(1 - scale_x)
-    if props.asym then
+    if props.symmetrical then
       change_left = props.width * (1 - scale_x)
     end
   end
   if corner == 1 or corner == 2 or corner == 3 then
     local min_scale_to_use = min_scale_top
     local max_scale_to_use = max_scale_top
-    if props.asym then
+    if props.symmetrical then
       min_scale_to_use = math.min(min_scale_top, min_scale_bottom) * 1.75
       max_scale_to_use = math.min(max_scale_top, max_scale_bottom)
     end
@@ -147,13 +147,13 @@ return function(props, change_left, change_top, change_right, change_bottom, cor
     scale_y = math.min(scale_y, max_scale_to_use)
     scale_y = math.max(scale_y, 0)
     change_top = props.height * (1 - scale_y)
-    if props.asym then
+    if props.symmetrical then
       change_bottom = props.height * -(1 - scale_y)
     end
   elseif corner == 5 or corner == 6 or corner == 7 then
     local min_scale_to_use = min_scale_bottom
     local max_scale_to_use = max_scale_bottom
-    if props.asym then
+    if props.symmetrical then
       min_scale_to_use = math.min(min_scale_bottom, min_scale_top) * 1.75
       max_scale_to_use = math.min(max_scale_bottom, max_scale_top)
     end
@@ -161,7 +161,7 @@ return function(props, change_left, change_top, change_right, change_bottom, cor
     scale_y = math.min(scale_y, max_scale_to_use)
     scale_y = math.max(scale_y, 0)
     change_bottom = props.height * -(1 - scale_y)
-    if props.asym then
+    if props.symmetrical then
       change_top = props.height * (1 - scale_y)
     end
   end
@@ -244,18 +244,18 @@ return function(props, change_left, change_top, change_right, change_bottom, cor
   -- THis only restricts the INITIAL changes, not the ones made after aspect ratio scaling
 
   -- Restrict shrinkage to min_ sizes
-  change_left = math.min(change_left, (props.width - props.min_width) / (props.asym and 2 or 1))
-  change_right = math.max(change_right, -(props.width - props.min_width) / (props.asym and 2 or 1))
-  change_top = math.min(change_top, (props.height - props.min_height) / (props.asym and 2 or 1))
-  change_bottom = math.max(change_bottom, -(props.height - props.min_height) / (props.asym and 2 or 1))
+  change_left = math.min(change_left, (props.width - props.min_width) / (props.symmetrical and 2 or 1))
+  change_right = math.max(change_right, -(props.width - props.min_width) / (props.symmetrical and 2 or 1))
+  change_top = math.min(change_top, (props.height - props.min_height) / (props.symmetrical and 2 or 1))
+  change_bottom = math.max(change_bottom, -(props.height - props.min_height) / (props.symmetrical and 2 or 1))
 
   -- Restrict expansion to max_ sizes
-  change_left = math.max(change_left, (props.width - props.max_width) / (props.asym and 2 or 1))
-  change_right = math.min(change_right, -(props.width - props.max_width) / (props.asym and 2 or 1))
-  change_top = math.max(change_top, (props.height - props.max_height) / (props.asym and 2 or 1))
-  change_bottom = math.min(change_bottom, -(props.height - props.max_height) / (props.asym and 2 or 1))
+  change_left = math.max(change_left, (props.width - props.max_width) / (props.symmetrical and 2 or 1))
+  change_right = math.min(change_right, -(props.width - props.max_width) / (props.symmetrical and 2 or 1))
+  change_top = math.max(change_top, (props.height - props.max_height) / (props.symmetrical and 2 or 1))
+  change_bottom = math.min(change_bottom, -(props.height - props.max_height) / (props.symmetrical and 2 or 1))
 
-  if props.asym then
+  if props.symmetrical then
     if math.abs(change_left) > 0 then
       change_right = -change_left
       change_right = constrain_right()

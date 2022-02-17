@@ -227,12 +227,12 @@ test("Can't resize bigger than max size", function()
   expect(update_draggable(props2, 0, 0, 0, 200, 6)).to_be(0, 0, 0, 50)
 end)
 
-test("(asym) Resizes the opposite side (no constraints)", function()
+test("(symmetrical) Resizes the opposite side (no constraints)", function()
   local props3 = {
     x = 100, y = 50,
     width = 50, height = 50,
     min_width = 10, min_height = 10,
-    asym = true,
+    symmetrical = true,
     constraints = { left = 0, top = 0, right = 200, bottom = 200 }
   }
   expect(update_draggable(props3, -20, 0, 0, 0, 8)).to_be(-20, 0, 20, 0)
@@ -245,9 +245,9 @@ test("(asym) Resizes the opposite side (no constraints)", function()
   expect(update_draggable(props3, 0, 0, 0, 20, 6)).to_be(0, -20, 0, 20)
 end)
 
-test("(asym) Shrinking stops at min_ sizes", function()
+test("(symmetrical) Shrinking stops at min_ sizes", function()
   local props = {
-    asym = true,
+    symmetrical = true,
     x = 100, y = 100,
     width = 55, height = 50,
     min_width = 20, min_height = 20,
@@ -258,9 +258,9 @@ test("(asym) Shrinking stops at min_ sizes", function()
   expect(update_draggable(props, 0, 0, 0, -30, 6)).to_be(0, 15, 0, -15)
 end)
 
-test("(asym) Resizer stops when opposite side hits constraint", function()
+test("(symmetrical) Resizer stops when opposite side hits constraint", function()
   local props = {
-    asym = true,
+    symmetrical = true,
     x = 100, y = 100,
     width = 50, height = 50,
     min_width = 20, min_height = 20,
