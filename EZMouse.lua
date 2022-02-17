@@ -167,6 +167,8 @@ function Widget:__call(props)
     height = props.height or 100,
     min_width = props.min_width or 1,
     min_height = props.min_height or 1,
+    max_width = props.max_width or 999999,
+    max_height = props.max_height or 999999,
     draggable = props.draggable == nil and true or not not props.draggable,
     drag_anchor = props.drag_anchor or nil, -- either "center" or nil
     drag_granularity = props.drag_granularity or 0.1,
@@ -433,6 +435,8 @@ local function update(gui)
           height = resize_start_height,
           min_width = draggable.min_width,
           min_height = draggable.min_height,
+          max_width = draggable.max_width,
+          max_height = draggable.max_height,
           constraints = draggable.constraints,
           -- asym = true,
           -- quantization = 20,

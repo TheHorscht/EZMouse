@@ -64,6 +64,14 @@ local function calc_height(props, change_top, change_bottom)
   return props.height - change_top + change_bottom
 end
 
+local function calc_size(props, change_left, change_top, change_right, change_bottom)
+  return calc_width(props, change_left, change_right), calc_height(props, change_top, change_bottom)
+end
+
+local function feq2(v1, v2)
+  return math.abs(v1 - v2) < 0.001
+end
+
 -- float equals
 local function feq(v1)
   return {
@@ -132,6 +140,10 @@ local function expect(...)
           if not v.func(values[i])  then
             throw_error()
           end
+        elseif type(v) == "number" then
+          if not feq2(v, values[i]) then
+            throw_error()
+          end
         elseif v ~= values[i] then
           throw_error()
         end
@@ -155,16 +167,27 @@ local function only_test(name, func)
   table.insert(ONLY_tests, { name = name, func = func })
 end
 
+test("Basic", function()
+  local props = {
+    x = 50, y = 50,
+    width = 20, height = 20,
+  }
+  expect(update_draggable(props, -20, 0, 0, 0, 8)).to_be(-20, 0, 0, 0)
+  expect(update_draggable(props, 0, -20, 0, 0, 2)).to_be(0, -20, 0, 0)
+  expect(update_draggable(props, 0, 0, 20, 0, 4)).to_be(0, 0, 20, 0)
+  expect(update_draggable(props, 0, 0, 0, 20, 6)).to_be(0, 0, 0, 20)
+end)
+
 test("Can't resize past constraints", function()
   local props = {
     x = 50, y = 50,
     width = 20, height = 20,
     constraints = { left = 30, top = 30, right = 100, bottom = 100 }
   }
-  expect(update_draggable(props, -51, 0, 0, 0)).to_be(-20, 0, 0, 0)
-  expect(update_draggable(props, 0, -52, 0, 0)).to_be(0, -20, 0, 0)
-  expect(update_draggable(props, 0, 0, 53, 0)).to_be(0, 0, 30, 0)
-  expect(update_draggable(props, 0, 0, 0, 54)).to_be(0, 0, 0, 30)
+  expect(update_draggable(props, -51, 0, 0, 0, 8)).to_be(-20, 0, 0, 0)
+  expect(update_draggable(props, 0, -52, 0, 0, 2)).to_be(0, -20, 0, 0)
+  expect(update_draggable(props, 0, 0, 53, 0, 4)).to_be(0, 0, 30, 0)
+  expect(update_draggable(props, 0, 0, 0, 54, 6)).to_be(0, 0, 0, 30)
 end)
 
 test("Resizer not moving past the opposite side", function()
@@ -173,10 +196,10 @@ test("Resizer not moving past the opposite side", function()
     width = 20, height = 20,
     constraints = { left = 30, top = 0, right = 100, bottom = 100 }
   }
-  expect(update_draggable(props, 200, 0, 0, 0)).to_be(20, 0, 0, 0)
-  expect(update_draggable(props, 0, 200, 0, 0)).to_be(0, 20, 0, 0)
-  expect(update_draggable(props, 0, 0, -200, 0)).to_be(0, 0, -20, 0)
-  expect(update_draggable(props, 0, 0, 0, -200)).to_be(0, 0, 0, -20)
+  expect(update_draggable(props, 200, 0, 0, 0, 8)).to_be(19, 0, 0, 0)
+  expect(update_draggable(props, 0, 200, 0, 0, 2)).to_be(0, 19, 0, 0)
+  expect(update_draggable(props, 0, 0, -200, 0, 4)).to_be(0, 0, -19, 0)
+  expect(update_draggable(props, 0, 0, 0, -200, 6)).to_be(0, 0, 0, -19)
 end)
 
 test("Can't resize smaller than min size", function()
@@ -186,10 +209,22 @@ test("Can't resize smaller than min size", function()
     min_width = 20, min_height = 70,
     constraints = { left = 50, top = 0, right = 200, bottom = 200 }
   }
-  expect(update_draggable(props2, 20, 0, 0, 0)).to_be(10, 0, 0, 0)
-  expect(update_draggable(props2, 0, 0, -20, 0)).to_be(0, 0, -10, 0)
-  expect(update_draggable(props2, 0, 20, 0, 0)).to_be(0, 10, 0, 0)
-  expect(update_draggable(props2, 0, 0, 0, -20)).to_be(0, 0, 0, -10)
+  expect(update_draggable(props2, 20, 0, 0, 0, 8)).to_be(feq(10), feq(0), feq(0), feq(0))
+  expect(update_draggable(props2, 0, 20, 0, 0, 2)).to_be(feq(0), feq(10), feq(0), feq(0))
+  expect(update_draggable(props2, 0, 0, -20, 0, 4)).to_be(feq(0), feq(0), feq(-10), feq(0))
+  expect(update_draggable(props2, 0, 0, 0, -20, 6)).to_be(feq(0), feq(0), feq(0), feq(-10))
+end)
+
+test("Can't resize bigger than max size", function()
+  local props2 = {
+    x = 0, y = 0,
+    width = 50, height = 50,
+    max_width = 100, max_height = 100,
+  }
+  expect(update_draggable(props2, -200, 0, 0, 0, 8)).to_be(-50, 0, 0, 0)
+  expect(update_draggable(props2, 0, -200, 0, 0, 2)).to_be(0, -50, 0, 0)
+  expect(update_draggable(props2, 0, 0, 200, 0, 4)).to_be(0, 0, 50, 0)
+  expect(update_draggable(props2, 0, 0, 0, 200, 6)).to_be(0, 0, 0, 50)
 end)
 
 test("(asym) Resizes the opposite side (no constraints)", function()
@@ -200,27 +235,27 @@ test("(asym) Resizes the opposite side (no constraints)", function()
     asym = true,
     constraints = { left = 0, top = 0, right = 200, bottom = 200 }
   }
-  expect(update_draggable(props3, -20, 0, 0, 0)).to_be(-20, 0, 20, 0)
-  expect(update_draggable(props3, 0, -20, 0, 0)).to_be(0, -20, 0, 20)
-  expect(update_draggable(props3, 0, 0, -20, 0)).to_be(20, 0, -20, 0)
-  expect(update_draggable(props3, 0, 0, 0, -20)).to_be(0, 20, 0, -20)
-  expect(update_draggable(props3, 20, 0, 0, 0)).to_be(20, 0, -20, 0)
-  expect(update_draggable(props3, 0, 20, 0, 0)).to_be(0, 20, 0, -20)
-  expect(update_draggable(props3, 0, 0, 20, 0)).to_be(-20, 0, 20, 0)
-  expect(update_draggable(props3, 0, 0, 0, 20)).to_be(0, -20, 0, 20)
+  expect(update_draggable(props3, -20, 0, 0, 0, 8)).to_be(-20, 0, 20, 0)
+  expect(update_draggable(props3, 0, -20, 0, 0, 2)).to_be(0, -20, 0, 20)
+  expect(update_draggable(props3, 0, 0, -20, 0, 4)).to_be(20, 0, -20, 0)
+  expect(update_draggable(props3, 0, 0, 0, -20, 6)).to_be(0, 20, 0, -20)
+  expect(update_draggable(props3, 20, 0, 0, 0, 8)).to_be(20, 0, -20, 0)
+  expect(update_draggable(props3, 0, 20, 0, 0, 2)).to_be(0, 20, 0, -20)
+  expect(update_draggable(props3, 0, 0, 20, 0, 4)).to_be(-20, 0, 20, 0)
+  expect(update_draggable(props3, 0, 0, 0, 20, 6)).to_be(0, -20, 0, 20)
 end)
 
 test("(asym) Shrinking stops at min_ sizes", function()
   local props = {
     asym = true,
     x = 100, y = 100,
-    width = 50, height = 50,
+    width = 55, height = 50,
     min_width = 20, min_height = 20,
   }
-  expect(update_draggable(props, 30, 0, 0, 0)).to_be(15, 0, -15, 0)
-  expect(update_draggable(props, 0, 0, -30, 0)).to_be(15, 0, -15, 0)
-  expect(update_draggable(props, 0, 30, 0, 0)).to_be(0, 15, 0, -15)
-  expect(update_draggable(props, 0, 0, 0, -30)).to_be(0, 15, 0, -15)
+  expect(update_draggable(props, 30, 0, 0, 0, 8)).to_be(20, 0, -20, 0)
+  expect(update_draggable(props, 0, 30, 0, 0, 2)).to_be(0, 15, 0, -15)
+  expect(update_draggable(props, 0, 0, -30, 0, 4)).to_be(20, 0, -20, 0)
+  expect(update_draggable(props, 0, 0, 0, -30, 6)).to_be(0, 15, 0, -15)
 end)
 
 test("(asym) Resizer stops when opposite side hits constraint", function()
@@ -231,10 +266,10 @@ test("(asym) Resizer stops when opposite side hits constraint", function()
     min_width = 20, min_height = 20,
     constraints = { left = 50, top = 50, right = 160, bottom = 200 }
   }
-  expect(update_draggable(created_merged_table(props, { constraints = { left = 50, right = 160 }}), -100, 0, 0, 0)).to_be(-10, 0, 10, 0)
-  expect(update_draggable(created_merged_table(props, { constraints = { left = 80, right = 200 }}), 0, 0, 100, 0)).to_be(-20, 0, 20, 0)
-  expect(update_draggable(created_merged_table(props, { constraints = { bottom = 170, top = 0 }}), 0, -100, 0, 0)).to_be(0, -20, 0, 20)
-  expect(update_draggable(created_merged_table(props, { constraints = { bottom = 200, top = 90 }}), 0, 0, 0, 100)).to_be(0, -10, 0, 10)
+  expect(update_draggable(created_merged_table(props, { constraints = { left = 50, right = 160 }}), -100, 0, 0, 0, 8)).to_be(-10, 0, 10, 0)
+  expect(update_draggable(created_merged_table(props, { constraints = { bottom = 170, top = 0 }}), 0, -100, 0, 0, 2)).to_be(0, -20, 0, 20)
+  expect(update_draggable(created_merged_table(props, { constraints = { left = 80, right = 200 }}), 0, 0, 100, 0, 4)).to_be(-20, 0, 20, 0)
+  expect(update_draggable(created_merged_table(props, { constraints = { bottom = 200, top = 90 }}), 0, 0, 0, 100, 6)).to_be(0, -10, 0, 10)
 end)
 
 test("(quant) Resizing gets quantized", function()
@@ -245,14 +280,14 @@ test("(quant) Resizing gets quantized", function()
   }
   for i=1, 2 do
     local sign = i == 1 and -1 or 1
-    expect(update_draggable(props,  7 * sign, 0, 0, 0)).to_be(0, 0, 0, 0)
-    expect(update_draggable(props, 13 * sign, 0, 0, 0)).to_be(10 * sign, 0, 0, 0)
-    expect(update_draggable(props, 0,  7 * sign, 0, 0)).to_be(0, 0, 0, 0)
-    expect(update_draggable(props, 0, 13 * sign, 0, 0)).to_be(0, 10 * sign, 0, 0)
-    expect(update_draggable(props, 0, 0,  7 * sign, 0)).to_be(0, 0, 0, 0)
-    expect(update_draggable(props, 0, 0, 13 * sign, 0)).to_be(0, 0, 10 * sign, 0)
-    expect(update_draggable(props, 0, 0, 0,  7 * sign)).to_be(0, 0, 0, 0)
-    expect(update_draggable(props, 0, 0, 0, 13 * sign)).to_be(0, 0, 0, 10 * sign)
+    expect(update_draggable(props,  7 * sign, 0, 0, 0, 8)).to_be(0, 0, 0, 0)
+    expect(update_draggable(props, 13 * sign, 0, 0, 0, 8)).to_be(10 * sign, 0, 0, 0)
+    expect(update_draggable(props, 0,  7 * sign, 0, 0, 2)).to_be(0, 0, 0, 0)
+    expect(update_draggable(props, 0, 13 * sign, 0, 0, 2)).to_be(0, 10 * sign, 0, 0)
+    expect(update_draggable(props, 0, 0,  7 * sign, 0, 4)).to_be(0, 0, 0, 0)
+    expect(update_draggable(props, 0, 0, 13 * sign, 0, 4)).to_be(0, 0, 10 * sign, 0)
+    expect(update_draggable(props, 0, 0, 0,  7 * sign, 6)).to_be(0, 0, 0, 0)
+    expect(update_draggable(props, 0, 0, 0, 13 * sign, 6)).to_be(0, 0, 0, 10 * sign)
   end
 end)
 
@@ -263,10 +298,10 @@ test("(quant) Hitting constraints respects quantization", function()
     width = 50, height = 50,
     constraints = { left = 50, top = 50, right = 200, bottom = 200 }
   }
-  expect(update_draggable(props, -70, 0, 0, 0)).to_be(-42, 0, 0, 0)
-  expect(update_draggable(props, 0, -70, 0, 0)).to_be(0, -42, 0, 0)
-  expect(update_draggable(props, 0, 0, 70, 0)).to_be(0, 0, 42, 0)
-  expect(update_draggable(props, 0, 0, 0, 70)).to_be(0, 0, 0, 42)
+  expect(update_draggable(props, -70, 0, 0, 0, 8)).to_be(-42, 0, 0, 0)
+  expect(update_draggable(props, 0, -70, 0, 0, 2)).to_be(0, -42, 0, 0)
+  expect(update_draggable(props, 0, 0, 70, 0, 4)).to_be(0, 0, 42, 0)
+  expect(update_draggable(props, 0, 0, 0, 70, 6)).to_be(0, 0, 0, 42)
 end)
 
 test("(quant) Width and height increase in multiples of quantization", function()
@@ -276,20 +311,20 @@ test("(quant) Width and height increase in multiples of quantization", function(
     width = 100, height = 100,
   }
   for i=1, 2 do
-    local function test(props, change_left, change_top, change_right, change_bottom)
-      local change_left, change_top, change_right, change_bottom = update_draggable(props, change_left, change_top, change_right, change_bottom)
+    local function test(props, change_left, change_top, change_right, change_bottom, corner)
+      local change_left, change_top, change_right, change_bottom = update_draggable(props, change_left, change_top, change_right, change_bottom, corner)
       expect((calc_width(props, change_left, change_right) - props.width) % props.quantization).error_level(3).to_be(0)
       expect((calc_height(props, change_top, change_bottom) - props.height) % props.quantization).error_level(3).to_be(0)
     end
     local sign = i == 1 and -1 or 1
-    test(props,  7 * sign, 0, 0, 0)
-    test(props, 13 * sign, 0, 0, 0)
-    test(props, 0,  7 * sign, 0, 0)
-    test(props, 0, 13 * sign, 0, 0)
-    test(props, 0, 0,  7 * sign, 0)
-    test(props, 0, 0, 13 * sign, 0)
-    test(props, 0, 0, 0,  7 * sign)
-    test(props, 0, 0, 0, 13 * sign)
+    test(props,  7 * sign, 0, 0, 0, 8)
+    test(props, 13 * sign, 0, 0, 0, 8)
+    test(props, 0,  7 * sign, 0, 0, 2)
+    test(props, 0, 13 * sign, 0, 0, 2)
+    test(props, 0, 0,  7 * sign, 0, 4)
+    test(props, 0, 0, 13 * sign, 0, 4)
+    test(props, 0, 0, 0,  7 * sign, 6)
+    test(props, 0, 0, 0, 13 * sign, 6)
   end
 end)
 
@@ -301,20 +336,20 @@ test("(aspect) Keeps aspect ratio when resizing", function()
     width = 50, height = 150,
     aspect = true,
   }
-  local function resize(props, change_left, change_top, change_right, change_bottom)
-    local change_left, change_top, change_right, change_bottom = update_draggable(props, change_left, change_top, change_right, change_bottom)
+  local function resize(props, change_left, change_top, change_right, change_bottom, corner)
+    local change_left, change_top, change_right, change_bottom = update_draggable(props, change_left, change_top, change_right, change_bottom, corner)
     local new_width = calc_width(props, change_left, change_right)
     local new_height = calc_height(props, change_top, change_bottom)
     return new_width, new_height
   end
-  expect(resize(props, -50, 0, 0, 0)).to_be(100, 300)
-  expect(resize(props, 0, -150, 0, 0)).to_be(100, 300)
-  expect(resize(props, 0, 0, 50, 0)).to_be(100, 300)
-  expect(resize(props, 0, 0, 0, 150)).to_be(100, 300)
-  expect(resize(props, 25, 0, 0, 0)).to_be(25, 75)
-  expect(resize(props, 0, 75, 0, 0)).to_be(25, 75)
-  expect(resize(props, 0, 0, -25, 0)).to_be(25, 75)
-  expect(resize(props, 0, 0, 0, -75)).to_be(25, 75)
+  expect(resize(props, -50, 0, 0, 0, 8)).to_be(100, 300)
+  expect(resize(props, 0, -150, 0, 0, 2)).to_be(100, 300)
+  expect(resize(props, 0, 0, 50, 0, 4)).to_be(100, 300)
+  expect(resize(props, 0, 0, 0, 150, 6)).to_be(100, 300)
+  expect(resize(props, 25, 0, 0, 0, 8)).to_be(25, 75)
+  expect(resize(props, 0, 75, 0, 0, 2)).to_be(25, 75)
+  expect(resize(props, 0, 0, -25, 0, 4)).to_be(25, 75)
+  expect(resize(props, 0, 0, 0, -75, 6)).to_be(25, 75)
 end)
 
 test("(aspect) (L,R,U,D) Adjacent sides get resized equally", function()
@@ -330,7 +365,6 @@ test("(aspect) (L,R,U,D) Adjacent sides get resized equally", function()
     expect(update_draggable(props, 0, 0, sign * 30, 0, 4)).to_be(0, feq(sign * -45), feq(sign * 30), feq(sign * 45))
     expect(update_draggable(props, 0, 0, 0, sign * 30, 6)).to_be(feq(sign * -5), 0, feq(sign * 5), feq(sign * 30))
   end
-  expect(update_draggable(props, 0, 0, 0, 0)).to_be(0, 0, 0, 0)
 end)
 
 test("(aspect) Diagonal resizing", function()
@@ -449,6 +483,66 @@ test("(aspect) Min sizes get respected when resizing", function()
   test(props, 0, 0, 0, -100, 6)
   test(props, 100, 0, 0, -100, 7)
   test(props, 100, 0, 0, 0, 8)
+end)
+
+-- test("(aspect) Catch one specific bug about jumpy values when resizing", function()
+--   local props = {
+--     x = 10, y = 10,
+--     width = 25, height = 50,
+--     max_width = 50, max_height = 100,
+--     aspect = true,
+--   }
+--   expect(update_draggable(created_merged_table(props, { width = 50, height = 100, max_width = 50, max_height = 50 }), -100, 0, 0, 0, 2)).to_be(0,0 ,0, 0)
+-- end)
+
+test("(all) Output is 0 when input is 0", function()
+  local props = {
+    x = 10, y = 10,
+    -- width = 25, height = 50,
+    width = 50, height = 50,
+    min_width = 25, min_height = 25,
+    max_width = 70, max_height = 70,
+    aspect = true,
+  }
+  for i=1, 8 do
+    expect(update_draggable(props, 0, 0, 0, 0, i)).info(i).to_be(0, 0, 0, 0)
+  end
+end)
+
+test("(aspect) Max sizes get respected when resizing", function()
+  local props = {
+    x = 10, y = 10,
+    width = 25, height = 50,
+    max_width = 50, max_height = 100,
+    aspect = true,
+  }
+
+  expect(update_draggable(created_merged_table(props, { max_width = 50 }), 0, -100, 0, 0, 2)).to_be(feq(-12.50), feq(-50), feq(12.50), 0)
+  expect(update_draggable(created_merged_table(props, { max_width = 55 }), 0, -100, 0, 0, 2)).to_be(feq(-12.50), feq(-50), feq(12.50), 0)
+  expect(update_draggable(created_merged_table(props, { max_width = 50 }), -100, 0, 0, 0, 2)).to_be(feq(-12.50), feq(-50), feq(12.50), 0)
+
+  --update_draggable(created_merged_table(props, { max_width = 70, max_height = 70 }), -100, 0, 0, 0, 2)
+  local proopy = created_merged_table(props, { max_width = 70, max_height = 70 })
+  expect(calc_size(proopy, update_draggable(proopy, -100, 0, 0, 0, 2))).to_be(feq(35), feq(70))
+  -- expect(update_draggable(created_merged_table(props, { max_width = 70, max_height = 70 }), -100, 0, 0, 0, 2)).to_be(feq(-15.00), feq(-60), feq(15.00), 0)
+  -- TODO: Infinite bug happens when dragging from leftmost to the left
+  -- and nan? bug happens when all changes are 0
+  expect(update_draggable(created_merged_table(props, { max_width = 55 }), -100, 0, 0, 0, 2)).to_be(feq(-15.00), feq(-60), feq(15.00), 0)
+
+  
+  local function test(props, change_left, change_top, change_right, change_bottom, resize_handle_index)
+    local change_left, change_top, change_right, change_bottom = update_draggable(props, change_left, change_top, change_right, change_bottom, resize_handle_index)
+    expect(calc_width(props, change_left, change_right)).error_level(3).to_be(50)
+    expect(calc_height(props, change_top, change_bottom)).error_level(3).to_be(100)
+  end
+  test(props, -100, -100, 0, 0, 1)
+  test(props, 0, -100, 0, 0, 2)
+  test(props, 0, -100, 100, 0, 3)
+  test(props, 0, 0, 100, 0, 4)
+  test(props, 0, 0, 100, 100, 5)
+  test(props, 0, 0, 0, 100, 6)
+  test(props, -100, 0, 0, 100, 7)
+  test(props, -100, 0, 0, 0, 8)
 end)
 
 -- ########################
