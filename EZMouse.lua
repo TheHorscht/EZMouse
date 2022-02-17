@@ -434,7 +434,7 @@ local function update(gui)
           min_width = draggable.min_width,
           min_height = draggable.min_height,
           constraints = draggable.constraints,
-          -- asym = true,
+          -- symmetrical = true,
           -- quantization = 20,
           aspect = true,
         }, change_left, change_top, change_right, change_bottom, widget_privates[draggable].resize_handle_index)

@@ -10,7 +10,7 @@ end
 return function(props, change_left, change_top, change_right, change_bottom, corner)
   props.min_width = props.min_width or 0
   props.min_height = props.min_height or 0
-  props.asym = not not props.asym
+  props.symmetrical = not not props.symmetrical
   props.constraints = props.constraints or { left = -999999, top = -999999, right = 999999, bottom = 999999 }
 
   local change_left_min = props.constraints.left - props.x
@@ -73,12 +73,12 @@ return function(props, change_left, change_top, change_right, change_bottom, cor
   -- THis only restricts the INITIAL changes, not the ones made after aspect ratio scaling
 
   -- Restrict shrinkage to min_ sizes
-  change_left = math.min(change_left, (props.width - props.min_width) / (props.asym and 2 or 1))
-  change_right = math.max(change_right, -(props.width - props.min_width) / (props.asym and 2 or 1))
-  change_top = math.min(change_top, (props.height - props.min_height) / (props.asym and 2 or 1))
-  change_bottom = math.max(change_bottom, -(props.height - props.min_height) / (props.asym and 2 or 1))
+  change_left = math.min(change_left, (props.width - props.min_width) / (props.symmetrical and 2 or 1))
+  change_right = math.max(change_right, -(props.width - props.min_width) / (props.symmetrical and 2 or 1))
+  change_top = math.min(change_top, (props.height - props.min_height) / (props.symmetrical and 2 or 1))
+  change_bottom = math.max(change_bottom, -(props.height - props.min_height) / (props.symmetrical and 2 or 1))
 
-  if props.asym then
+  if props.symmetrical then
     if math.abs(change_left) > 0 then
       change_right = -change_left
       change_right = constrain_right()
