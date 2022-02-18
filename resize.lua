@@ -187,16 +187,32 @@ return function(props, change_left, change_top, change_right, change_bottom, cor
       scale = desired_scale_x
     end
     if secondary.left then
-      scale = clamp(scale, min_scale_left, ((max_scale_left - 1) * 2) + 1)
+      local s = max_scale_left
+      if secondary.right then
+        s = ((s - 1) * 2) + 1
+      end
+      scale = clamp(scale, min_scale_left, s)
     end
     if secondary.right then
-      scale = clamp(scale, min_scale_right, ((max_scale_right - 1) * 2) + 1)
+      local s = max_scale_right
+      if secondary.left then
+        s = ((s - 1) * 2) + 1
+      end
+      scale = clamp(scale, min_scale_right, s)
     end
     if secondary.top then
-      scale = clamp(scale, min_scale_top, ((max_scale_top - 1) * 2) + 1)
+      local s = max_scale_top
+      if secondary.bottom then
+        s = ((s - 1) * 2) + 1
+      end
+      scale = clamp(scale, min_scale_top, s)
     end
     if secondary.bottom then
-      scale = clamp(scale, min_scale_bottom, ((max_scale_bottom - 1) * 2) + 1)
+      local s = max_scale_bottom
+      if secondary.top then
+        s = ((s - 1) * 2) + 1
+      end
+      scale = clamp(scale, min_scale_bottom, s)
     end
 
     desired_scale_x = scale

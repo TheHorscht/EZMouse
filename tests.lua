@@ -443,8 +443,8 @@ test("(aspect) Constraints work when secondary sides hit them", function()
     aspect = true,
     constraints = { left = 0, top = 0, right = 200, bottom = 175, }
   }
-  expect(update_draggable(created_merged_table(props, { width = 50, height = 100 }), -25, 0, 0, 0, 8)).to_be(-10, -10, 0, 10)
-  expect(update_draggable(created_merged_table(props, { x = 10, y = 50, width = 100, height = 50 }), 0, -100, 0, 0, 2)).to_be(-5, -5, 5, 0)
+  expect(update_draggable(created_merged_table(props, { width = 50, height = 100 }), -25, 0, 0, 0, 8)).to_be(-20, -20, 0, 20)
+  expect(update_draggable(created_merged_table(props, { x = 10, y = 50, width = 100, height = 50 }), 0, -100, 0, 0, 2)).to_be(-10, -10, 10, 0)
   local props2 = created_merged_table(props, { x = 150, y = 50, constraints = { bottom = 500 } })
   expect(update_draggable(props2, 0, -100, 0, 0, 2)).to_be(0, 0, 0, 0)
   local props3 = created_merged_table(props, { x = 100, y = 500, constraints = { bottom = 5000 } })
