@@ -438,14 +438,27 @@ end)
 
 test("(aspect) Constraints work when secondary sides hit them", function()
   local props = {
-    x = 50, y = 50,
+    x = 50, y = 20,
     width = 50, height = 100,
     aspect = true,
     constraints = { left = 0, top = 0, right = 200, bottom = 175, }
   }
-  expect(update_draggable(created_merged_table(props, { width = 50, height = 100 }), -25, 0, 0, 0, 8)).to_be(-25, -25, 0, 25)
-  expect(update_draggable(created_merged_table(props, { width = 100, height = 50 }), 0, -100, 0, 0, 2)).to_be(-50, -50, 50, 0)
-  -- TODO: More comprehensive testing...
+  expect(update_draggable(created_merged_table(props, { width = 50, height = 100 }), -25, 0, 0, 0, 8)).to_be(-10, -10, 0, 10)
+  expect(update_draggable(created_merged_table(props, { x = 10, y = 50, width = 100, height = 50 }), 0, -100, 0, 0, 2)).to_be(-5, -5, 5, 0)
+  local props2 = created_merged_table(props, { x = 150, y = 50, constraints = { bottom = 500 } })
+  expect(update_draggable(props2, 0, -100, 0, 0, 2)).to_be(0, 0, 0, 0)
+  local props3 = created_merged_table(props, { x = 100, y = 500, constraints = { bottom = 5000 } })
+  local c = { left = 50, top = 50, right = 300, bottom = 300 }
+  local props3 = { aspect = true, constraints = c,
+    x = 225, y = 200, width = 50, height = 100,
+  }
+  expect(update_draggable(props3, 0, -200, 0, 0, 2)).to_be(-25, -100, 25, 0)
+  local props4 = { aspect = true, constraints = c,
+    x = 230, y = 250, width = 25, height = 50,
+  }
+  local l, t, r, b = update_draggable(props4, 0, -200, 0, 0, 2)
+  local new_right_side_x = props4.x + props4.width + r
+  expect(new_right_side_x).to_be(300)
 end)
 
 test("(aspect) Constraints of secondary side work resizing diagonally", function()
@@ -484,16 +497,6 @@ test("(aspect) Min sizes get respected when resizing", function()
   test(props, 100, 0, 0, -100, 7)
   test(props, 100, 0, 0, 0, 8)
 end)
-
--- test("(aspect) Catch one specific bug about jumpy values when resizing", function()
---   local props = {
---     x = 10, y = 10,
---     width = 25, height = 50,
---     max_width = 50, max_height = 100,
---     aspect = true,
---   }
---   expect(update_draggable(created_merged_table(props, { width = 50, height = 100, max_width = 50, max_height = 50 }), -100, 0, 0, 0, 2)).to_be(0,0 ,0, 0)
--- end)
 
 test("(all) Output is 0 when input is 0", function()
   local props = {

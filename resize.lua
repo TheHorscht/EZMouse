@@ -186,19 +186,17 @@ return function(props, change_left, change_top, change_right, change_bottom, cor
     elseif corner == 8 or corner == 4 then
       scale = desired_scale_x
     end
-    local m1 = 1
-    local m2 = 2
     if secondary.left then
-      scale = clamp(scale, min_scale_left*m1, max_scale_left*m2)
+      scale = clamp(scale, min_scale_left, ((max_scale_left - 1) * 2) + 1)
     end
     if secondary.right then
-      scale = clamp(scale, min_scale_right*m1, max_scale_right*m2)
+      scale = clamp(scale, min_scale_right, ((max_scale_right - 1) * 2) + 1)
     end
-    if true or secondary.top then
-      scale = clamp(scale, min_scale_top*m1, max_scale_top*1)
+    if secondary.top then
+      scale = clamp(scale, min_scale_top, ((max_scale_top - 1) * 2) + 1)
     end
     if secondary.bottom then
-      scale = clamp(scale, min_scale_bottom*m1, max_scale_bottom*m2)
+      scale = clamp(scale, min_scale_bottom, ((max_scale_bottom - 1) * 2) + 1)
     end
 
     desired_scale_x = scale
