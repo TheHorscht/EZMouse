@@ -524,7 +524,7 @@ test("(aspect) Max sizes get respected when resizing", function()
   expect(update_draggable(created_merged_table(props, { max_width = 55 }), 0, -100, 0, 0, 2)).to_be(feq(-12.50), feq(-50), feq(12.50), 0)
   expect(update_draggable(created_merged_table(props, { max_width = 50 }), -100, 0, 0, 0, 8)).to_be(feq(-25.00), feq(-25), 0, feq(25.00))
 
-  local proopy = created_merged_table(props, { max_width = 70, max_height = 70 })
+  local proopy = created_merged_table(props, { max_width = 35, max_height = 70 })
   expect(calc_size(proopy, update_draggable(proopy, -100, 0, 0, 0, 8))).to_be(feq(35), feq(70))
   expect(update_draggable(created_merged_table(props, { max_width = 55, max_height = 110 }), -100, 0, 0, 0, 8)).to_be(feq(-30), feq(-30), 0, feq(30))
 
