@@ -1,3 +1,9 @@
+local function clamp(value, min, max)
+	value = math.max(value, min)
+	value = math.min(value, max)
+	return value
+end
+
 -- float equals
 local function feq(v1, v2)
   return math.abs(v1 - v2) < 0.001
@@ -35,32 +41,24 @@ return function(props, change_left, change_top, change_right, change_bottom, cor
   local change_right_min = props.min_width - props.width
   local change_bottom_min = props.min_height - props.height
 
-  -- local min_scale_horizontal = props.min_width / props.width
-  -- local min_scale_vertical = props.min_height / props.height
-  local min_scale_left = (props.width - change_left_max) / props.width -- HEREEEEE
+  local min_scale_left = (props.width - change_left_max) / props.width
   local max_scale_left = (props.width - change_left_min) / props.width
-  local min_scale_right = (props.width + change_right_min) / props.width -- HERE
+  local min_scale_right = (props.width + change_right_min) / props.width
   local max_scale_right = (props.width + change_right_max) / props.width
-  local min_scale_top = (props.height - change_top_max) / props.height -- HERE
+  local min_scale_top = (props.height - change_top_max) / props.height
   local max_scale_top = (props.height - change_top_min) / props.height
-  local min_scale_bottom = (props.height + change_bottom_min) / props.height -- HERE
+  local min_scale_bottom = (props.height + change_bottom_min) / props.height
   local max_scale_bottom = (props.height + change_bottom_max) / props.height
 
-  local max_scale_horizontal = math.min(max_scale_left, max_scale_right)
-  local max_scale_vertical = math.min(max_scale_top, max_scale_bottom)
-
-  -- take smallest scale
+  if props.symmetrical then
+    min_scale_left = (props.width - change_left_max / 2) / props.width
+    min_scale_top = (props.height - change_top_max / 2) / props.height
+    min_scale_right = (props.width + change_right_min / 2) / props.width
+    min_scale_bottom = (props.height + change_bottom_min / 2) / props.height
+  end
 
   local aspect_ratio = props.width / props.height
   local origin_of_scaling_x, origin_of_scaling_y = props.width / 2, props.height / 2
-  if corner % 2 == 1 then
-    resize_horizontally = true
-    resize_vertically = true
-  elseif corner == 2 or corner == 6 then
-    resize_vertically = true
-  elseif corner == 4 or corner == 8 then
-    resize_horizontally = true
-  end
 
   if corner == 1 then
     origin_of_scaling_x = props.width
@@ -98,73 +96,128 @@ return function(props, change_left, change_top, change_right, change_bottom, cor
 
   local desired_scale_x = get_new_width(change_left, change_right) / props.width
   local desired_scale_y = get_new_height(change_top, change_bottom) / props.height
-  -- scale_x = math.min(scale_x, max_scale_left)
-  local scale_x = 1 -- math.min(desired_scale_x, max_scale_left)
-  local scale_y = 1 -- math.min(desired_scale_y, max_scale_top)
 
-  -- local scale_min = { min_scale_left, min_scale_top, min_scale_right, min_scale_bottom }
-  -- local scale_max = { max_scale_left, max_scale_top, max_scale_right, max_scale_bottom }
-  if corner == 1 or corner == 8 or corner == 7 then
-    local min_scale_to_use = min_scale_left
-    local max_scale_to_use = max_scale_left
-    -- if props.aspect then
-    --   min_scale_to_use = 
-    -- end
+  -- Determine which scales need to be taken into account
+  -- Get min and max scales of all into account taken scales
+  -- Clamp desired scale between those min maxes
+  local secondary = { left = false, top = false, right = false, bottom = false }
+  local resize_left = corner == 1 or corner == 8 or corner == 7
+  local resize_top = corner == 1 or corner == 2 or corner == 3
+  local resize_right = corner == 3 or corner == 4 or corner == 5
+  local resize_bottom = corner == 5 or corner == 6 or corner == 7
+
+  if resize_left then
     if props.symmetrical then
-      min_scale_to_use = math.min(min_scale_left, min_scale_right) * 1.75
-      max_scale_to_use = math.min(max_scale_left, max_scale_right)
+      secondary.right = true
     end
-    scale_x = math.max(desired_scale_x, min_scale_to_use)
-    scale_x = math.min(scale_x, max_scale_to_use)
-    scale_x = math.max(scale_x, 0)
-    change_left = props.width * (1 - scale_x)
-    if props.symmetrical then
-      change_right = props.width * -(1 - scale_x)
+    if props.aspect and not resize_top and not resize_bottom then
+      secondary.top = true
+      secondary.bottom = true
     end
-  elseif corner == 3 or corner == 4 or corner == 5 then
-    local min_scale_to_use = min_scale_right
-    local max_scale_to_use = max_scale_right
-    if props.symmetrical then
-      min_scale_to_use = math.min(min_scale_right, min_scale_left) * 1.75
-      max_scale_to_use = math.min(max_scale_right, max_scale_left)
-    end
-    scale_x = math.max(desired_scale_x, min_scale_to_use)
-    scale_x = math.min(scale_x, max_scale_to_use)
-    scale_x = math.max(scale_x, 0)
-    change_right = props.width * -(1 - scale_x)
-    if props.symmetrical then
-      change_left = props.width * (1 - scale_x)
-    end
+    desired_scale_x = clamp(desired_scale_x, min_scale_left, max_scale_left)
+    desired_scale_x = math.max(desired_scale_x, 0)
   end
-  if corner == 1 or corner == 2 or corner == 3 then
-    local min_scale_to_use = min_scale_top
-    local max_scale_to_use = max_scale_top
+
+  if resize_top then
     if props.symmetrical then
-      min_scale_to_use = math.min(min_scale_top, min_scale_bottom) * 1.75
-      max_scale_to_use = math.min(max_scale_top, max_scale_bottom)
+      secondary.bottom = true
     end
-    scale_y = math.max(desired_scale_y, min_scale_to_use)
-    scale_y = math.min(scale_y, max_scale_to_use)
-    scale_y = math.max(scale_y, 0)
-    change_top = props.height * (1 - scale_y)
-    if props.symmetrical then
-      change_bottom = props.height * -(1 - scale_y)
+    if props.aspect and not resize_left and not resize_right then
+      secondary.left = true
+      secondary.right = true
     end
-  elseif corner == 5 or corner == 6 or corner == 7 then
-    local min_scale_to_use = min_scale_bottom
-    local max_scale_to_use = max_scale_bottom
-    if props.symmetrical then
-      min_scale_to_use = math.min(min_scale_bottom, min_scale_top) * 1.75
-      max_scale_to_use = math.min(max_scale_bottom, max_scale_top)
-    end
-    scale_y = math.max(desired_scale_y, min_scale_to_use)
-    scale_y = math.min(scale_y, max_scale_to_use)
-    scale_y = math.max(scale_y, 0)
-    change_bottom = props.height * -(1 - scale_y)
-    if props.symmetrical then
-      change_top = props.height * (1 - scale_y)
-    end
+    desired_scale_y = clamp(desired_scale_y, min_scale_top, max_scale_top)
+    desired_scale_y = math.max(desired_scale_y, 0)
   end
+
+  if resize_right then
+    if props.symmetrical then
+      secondary.left = true
+    end
+    if props.aspect and not resize_top and not resize_bottom then
+      secondary.top = true
+      secondary.bottom = true
+    end
+    desired_scale_x = clamp(desired_scale_x, min_scale_right, max_scale_right)
+    desired_scale_x = math.max(desired_scale_x, 0)
+  end
+
+  if resize_bottom then
+    if props.symmetrical then
+      secondary.top = true
+    end
+    if props.aspect and not resize_left and not resize_right then
+      secondary.left = true
+      secondary.right = true
+    end
+    desired_scale_y = clamp(desired_scale_y, min_scale_bottom, max_scale_bottom)
+    desired_scale_y = math.max(desired_scale_y, 0)
+  end
+
+  if secondary.left then
+    desired_scale_x = clamp(desired_scale_x, min_scale_left, max_scale_left)
+  end
+  if secondary.right then
+    desired_scale_x = clamp(desired_scale_x, min_scale_right, max_scale_right)
+  end
+  if secondary.top then
+    desired_scale_y = clamp(desired_scale_y, min_scale_top, max_scale_top)
+  end
+  if secondary.bottom then
+    desired_scale_y = clamp(desired_scale_y, min_scale_bottom, max_scale_bottom)
+  end
+
+  local scale_x_percent = origin_of_scaling_x / props.width
+  local scale_y_percent = origin_of_scaling_y / props.height
+
+  local symmetry_multiplier = 1
+  if props.symmetrical then
+    scale_x_percent = 0.5
+    scale_y_percent = 0.5
+    symmetry_multiplier = 2
+  end
+
+  if props.aspect then
+    local scale = 1
+    if corner % 2 == 1 then
+      scale = math.max(desired_scale_y, desired_scale_x)
+    elseif corner == 2 or corner == 6 then
+      scale = desired_scale_y
+    elseif corner == 8 or corner == 4 then
+      scale = desired_scale_x
+    end
+    local m1 = 1
+    local m2 = 2
+    if secondary.left then
+      scale = clamp(scale, min_scale_left*m1, max_scale_left*m2)
+    end
+    if secondary.right then
+      scale = clamp(scale, min_scale_right*m1, max_scale_right*m2)
+    end
+    if true or secondary.top then
+      scale = clamp(scale, min_scale_top*m1, max_scale_top*1)
+    end
+    if secondary.bottom then
+      scale = clamp(scale, min_scale_bottom*m1, max_scale_bottom*m2)
+    end
+
+    desired_scale_x = scale
+    desired_scale_y = scale
+  end
+
+  change_left = scale_x_percent * props.width * (1 - desired_scale_x)
+  change_top = scale_y_percent * props.height * (1 - desired_scale_y)
+  change_right = (1 - scale_x_percent) * -props.width * (1 - desired_scale_x)
+  change_bottom = (1 - scale_y_percent) * -props.height * (1 - desired_scale_y)
+
+  change_left = change_left * symmetry_multiplier
+  change_top = change_top * symmetry_multiplier
+  change_right = change_right * symmetry_multiplier
+  change_bottom = change_bottom * symmetry_multiplier
+  -- change_left = scale_x_percent * props.width * (1 - scale)
+  -- change_top = scale_y_percent * props.height * (1 - scale)
+  -- change_right = (1 - scale_x_percent) * -props.width * (1 - scale)
+  -- change_bottom = (1 - scale_y_percent) * -props.height * (1 - scale)
 
   if props.quantization then
     local function round(v)

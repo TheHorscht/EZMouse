@@ -249,13 +249,13 @@ test("(symmetrical) Shrinking stops at min_ sizes", function()
   local props = {
     symmetrical = true,
     x = 100, y = 100,
-    width = 55, height = 50,
+    width = 70, height = 70,
     min_width = 20, min_height = 20,
   }
-  expect(update_draggable(props, 30, 0, 0, 0, 8)).to_be(20, 0, -20, 0)
-  expect(update_draggable(props, 0, 30, 0, 0, 2)).to_be(0, 15, 0, -15)
-  expect(update_draggable(props, 0, 0, -30, 0, 4)).to_be(20, 0, -20, 0)
-  expect(update_draggable(props, 0, 0, 0, -30, 6)).to_be(0, 15, 0, -15)
+  expect(update_draggable(props, 30, 0, 0, 0, 8)).to_be(25, 0, -25, 0)
+  expect(update_draggable(props, 0, 30, 0, 0, 2)).to_be(0, 25, 0, -25)
+  expect(update_draggable(props, 0, 0, -30, 0, 4)).to_be(25, 0, -25, 0)
+  expect(update_draggable(props, 0, 0, 0, -30, 6)).to_be(0, 25, 0, -25)
 end)
 
 test("(symmetrical) Resizer stops when opposite side hits constraint", function()
@@ -448,7 +448,7 @@ test("(aspect) Constraints work when secondary sides hit them", function()
   -- TODO: More comprehensive testing...
 end)
 
-test("(aspect) Constraints work resizing diagonally", function()
+test("(aspect) Constraints of secondary side work resizing diagonally", function()
   local props = {
     x = 10, y = 10,
     width = 50, height = 100,
@@ -519,17 +519,12 @@ test("(aspect) Max sizes get respected when resizing", function()
 
   expect(update_draggable(created_merged_table(props, { max_width = 50 }), 0, -100, 0, 0, 2)).to_be(feq(-12.50), feq(-50), feq(12.50), 0)
   expect(update_draggable(created_merged_table(props, { max_width = 55 }), 0, -100, 0, 0, 2)).to_be(feq(-12.50), feq(-50), feq(12.50), 0)
-  expect(update_draggable(created_merged_table(props, { max_width = 50 }), -100, 0, 0, 0, 2)).to_be(feq(-12.50), feq(-50), feq(12.50), 0)
+  expect(update_draggable(created_merged_table(props, { max_width = 50 }), -100, 0, 0, 0, 8)).to_be(feq(-25.00), feq(-25), 0, feq(25.00))
 
-  --update_draggable(created_merged_table(props, { max_width = 70, max_height = 70 }), -100, 0, 0, 0, 2)
   local proopy = created_merged_table(props, { max_width = 70, max_height = 70 })
-  expect(calc_size(proopy, update_draggable(proopy, -100, 0, 0, 0, 2))).to_be(feq(35), feq(70))
-  -- expect(update_draggable(created_merged_table(props, { max_width = 70, max_height = 70 }), -100, 0, 0, 0, 2)).to_be(feq(-15.00), feq(-60), feq(15.00), 0)
-  -- TODO: Infinite bug happens when dragging from leftmost to the left
-  -- and nan? bug happens when all changes are 0
-  expect(update_draggable(created_merged_table(props, { max_width = 55 }), -100, 0, 0, 0, 2)).to_be(feq(-15.00), feq(-60), feq(15.00), 0)
+  expect(calc_size(proopy, update_draggable(proopy, -100, 0, 0, 0, 8))).to_be(feq(35), feq(70))
+  expect(update_draggable(created_merged_table(props, { max_width = 55, max_height = 110 }), -100, 0, 0, 0, 8)).to_be(feq(-30), feq(-30), 0, feq(30))
 
-  
   local function test(props, change_left, change_top, change_right, change_bottom, resize_handle_index)
     local change_left, change_top, change_right, change_bottom = update_draggable(props, change_left, change_top, change_right, change_bottom, resize_handle_index)
     expect(calc_width(props, change_left, change_right)).error_level(3).to_be(50)
