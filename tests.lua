@@ -459,6 +459,7 @@ test("(aspect) Constraints work when secondary sides hit them", function()
   local l, t, r, b = update_draggable(props4, 0, -200, 0, 0, 2)
   local new_right_side_x = props4.x + props4.width + r
   expect(new_right_side_x).to_be(300)
+  expect(update_draggable(props4, 0, 0, 25, 0, 5)).to_be(0, 0, 0, 0)
 end)
 
 test("(aspect) Constraints of secondary side work resizing diagonally", function()
