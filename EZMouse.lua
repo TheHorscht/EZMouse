@@ -175,7 +175,7 @@ function Widget:__call(props)
     resizable = not not props.resizable,
     resize_granularity = props.resize_granularity or 0.1,
     resize_symmetrical = not not props.resize_symmetrical,
-    resize_uniform = not not props.resize_uniform,
+    resize_keep_aspect_ratio = not not props.resize_keep_aspect_ratio,
     enabled = props.enabled == nil and true or not not props.enabled,
     hoverable = props.hoverable == nil and true or not not props.hoverable,
     constraints = validate_constraints(props.constraints),
@@ -415,20 +415,6 @@ local function update(gui)
         local change_top = dy * -math.min(widget_privates[draggable].resize_handle.move[2], 0)
         local change_bottom = dy * math.max(widget_privates[draggable].resize_handle.move[2], 0)
 
---[[  HERE BE THE NEW CODE ]]
-
-        -- function update_draggable(draggable, change_left, change_top, change_right, change_bottom)
-        --   return change_left, change_top, change_right, change_bottom
-        -- end
-        -- change_left, change_top, change_right, change_bottom = update_draggable(draggable, change_left, change_top, change_right, change_bottom)
-
-        if ComponentGetValue2(controls_component, "mButtonDownInteract") then
-          change_left = 0
-        end
-        GlobalsSetValue("change_left", change_left)
-        GlobalsSetValue("change_top", change_top)
-        GlobalsSetValue("change_right", change_right)
-        GlobalsSetValue("change_bottom", change_bottom)
         change_left, change_top, change_right, change_bottom = update_draggable({
           x = resize_start_x, y = resize_start_y,
           width = resize_start_width,
@@ -438,105 +424,10 @@ local function update(gui)
           max_width = draggable.max_width,
           max_height = draggable.max_height,
           constraints = draggable.constraints,
-          -- symmetrical = true,
-          -- quantization = 20,
-          aspect = true,
+          quantization = draggable.resize_granularity,
+          symmetrical = draggable.resize_symmetrical,
+          aspect = draggable.resize_keep_aspect_ratio,
         }, change_left, change_top, change_right, change_bottom, widget_privates[draggable].resize_handle_index)
-
---[[  /HERE ENDS THE NEW CODE ]]
-        
-        -- if draggable.resize_symmetrical then
-        --   local old_right = change_right
-        --   change_right = change_right - change_left
-        --   change_left = change_left - old_right
-        --   local old_bottom = change_bottom
-        --   change_bottom = change_bottom - change_top
-        --   change_top = change_top - old_bottom
-        -- end
-
-        -- if draggable.resize_uniform then
-        --   local scale_x = (resize_start_x + resize_start_width * math.max(0, -widget_privates[draggable].resize_handle.move[1]) - sx) * -widget_privates[draggable].resize_handle.move[1] / resize_start_width
-        --   local scale_y = (resize_start_y + resize_start_height * math.max(0, -widget_privates[draggable].resize_handle.move[2]) - sy) * -widget_privates[draggable].resize_handle.move[2] / resize_start_height
-        --   local scale = math.max(scale_x, scale_y)
-        --   -- local scale_granularity = draggable.resize_granularity
-        --   -- scale = math.floor(scale / scale_granularity) * scale_granularity
-        --   local scale_min_x = draggable.min_width / resize_start_width
-        --   local scale_min_y = draggable.min_height / resize_start_height
-        --   local scale_min = math.max(scale_min_x, scale_min_y)
-        --   scale = math.max(scale_min, scale)
-        --   new_width = resize_start_width * scale
-        --   new_height = resize_start_height * scale
-        -- end
-
-        -- local change_left_max = resize_start_width - draggable.min_width
-        -- change_left = math.max(change_left, (draggable.constraints.left or -999999) - resize_start_x)
-        -- change_left = math.min(change_left, change_left_max)
-        -- -- change_right = math.min(change_right, (draggable.constraints.right or 999999) - resize_start_x - resize_start_width)
-        -- local change_top_max = resize_start_height - draggable.min_height
-        -- change_top = math.max(change_top, (draggable.constraints.top or -999999) - resize_start_y)
-        -- change_top = math.min(change_top, change_top_max)
-        -- -- change_bottom = math.min(change_bottom, (draggable.constraints.bottom or 999999) - resize_start_y - resize_start_height)
-        -- if draggable.resize_symmetrical then
-        --   local change_left_max = (resize_start_width - draggable.min_width) / 2
-        --   local change_right_min = -(resize_start_width - draggable.min_width) / 2
-        --   change_left = math.min(change_left, change_left_max)
-        --   change_right = math.max(change_right, change_right_min)
-        --   if math.abs(change_left) > math.abs(change_right) then
-        --     change_left = change_right * -1
-        --   else
-        --     change_right = change_left * -1
-        --   end
-
-        --   local change_top_max = (resize_start_height - draggable.min_height) / 2
-        --   local change_bottom_min = -(resize_start_height - draggable.min_height) / 2
-        --   change_top = math.min(change_top, change_top_max)
-        --   change_bottom = math.max(change_bottom, change_bottom_min)
-        --   if math.abs(change_top) > math.abs(change_bottom) then
-        --     change_top = change_bottom * -1
-        --   else
-        --     change_bottom = change_top * -1
-        --   end
-        -- end
-
-        -- if draggable.resize_uniform then
-        --   local scale_x = (resize_start_width + change_right) / resize_start_width
-        --   local scale_y = (resize_start_height + change_bottom) / resize_start_height
-        --   -- local scale = math.max(scale_x, scale_y)
-        --   local aspect_ratio = resize_start_width / resize_start_height
-        --   print(("scale_x(%s)"):format(scale_x - 1 * resize_start_width))
-        --   print(("scale_y(%s)"):format((scale_y - 1) * aspect_ratio * resize_start_height))
-        --   -- print(("scale_x(%s)"):format(math.abs(scale_x - 1) * resize_start_width))
-        --   -- print(("scale_y(%s)"):format(math.abs((scale_y - 1) * aspect_ratio) * resize_start_height))
-        --   local scale = 1
-        --     -- if math.abs(resize_start_width - new_width_) > math.abs(resize_start_height - new_height_) then
-        --   -- if math.max(0, sx - resize_start_sx) > math.max(0, sy - resize_start_sy) then
-        --   -- if math.max(0, math.abs(resize_start_sx - sx)) > math.max(0, math.abs(resize_start_sy - sy)) then
-        --   if (scale_x - 1) * resize_start_width > (scale_y - 1) * resize_start_width then
-        --   -- if (scale_x - 1) * resize_start_width > (scale_y - 1) * resize_start_width then
-        --   -- if math.abs(scale_x - 1) * resize_start_width > math.abs((scale_y - 1) * aspect_ratio) * resize_start_height then
-        --     scale = scale_x
-        --   else
-        --     scale = scale_y
-        --   end
-
-        --   local scale_min_x = draggable.min_width / resize_start_width
-        --   local scale_min_y = draggable.min_height / resize_start_height
-        --   local scale_min = math.max(scale_min_x, scale_min_y)
-
-        --   local scale_max_x = ((draggable.constraints.right or 999999) - resize_start_x) / resize_start_width
-        --   local scale_max_y = ((draggable.constraints.bottom or 999999) - resize_start_y) / resize_start_height
-        --   local scale_max = math.min(scale_max_x, scale_max_y)
-
-        --   -- scale = math.min(scale_max, scale)
-        --   -- scale = math.max(scale_min, scale)
-        --   change_right = resize_start_width * scale - resize_start_width--change_right * scale
-        --   change_bottom = resize_start_height * scale - resize_start_height-- change_bottom * scale
-        --   -- new_width = resize_start_width * scale
-        --   -- new_height = resize_start_height * scale
-        -- end
-
-        -- local new_width = math.max(draggable.min_width, resize_start_width + change_right - change_left)
-        -- local new_height = math.max(draggable.min_height, resize_start_height + change_bottom - change_top)
 
         draggable.x = resize_start_x + change_left
         draggable.y = resize_start_y + change_top
