@@ -544,6 +544,41 @@ test("(aspect) Max sizes get respected when resizing", function()
   test(props, -100, 0, 0, 0, 8)
 end)
 
+test("(aspect + quant) Keeps aspect ratio", function()
+  local props = {
+    x = 0, y = 0,
+    width = 50, height = 100,
+    aspect = true,
+    quantization = 5
+  }
+  local function calculate_aspect_ratio(props, change_left, change_top, change_right, change_bottom)
+    return calc_width(props, change_left, change_right) / calc_height(props, change_top, change_bottom)
+  end
+  for i=1, 10 do
+    expect(calculate_aspect_ratio(props, update_draggable(props, 0, -10*i, 0, 0, 2))).info(i).to_be(0.5)
+    expect(calculate_aspect_ratio(props, update_draggable(props, 0, -10*i, 0, 0, 1))).info(i).to_be(0.5)
+    expect(calculate_aspect_ratio(props, update_draggable(props, -10*i, 0, 0, 0, 1))).info(i).to_be(0.5)
+  end
+end)
+
+test("(aspect + quant) Width and height increase only in quant sizes", function()
+  local props = {
+    x = 0, y = 0,
+    width = 50, height = 100,
+    aspect = true,
+    quantization = 5
+  }
+  local function get_aspect_ratio(props, change_left, change_top, change_right, change_bottom)
+    return calc_width(props, change_left, change_right) % props.quantization, calc_height(props, change_top, change_bottom) % props.quantization
+  end
+  for i=1, 10 do
+    expect(get_aspect_ratio(props, update_draggable(props, 0, -10*i, 0, 0, 2))).info(i).to_be(0, 0)
+    expect(get_aspect_ratio(props, update_draggable(props, 0, -10*i, 0, 0, 1))).info(i).to_be(0, 0)
+    expect(get_aspect_ratio(props, update_draggable(props, -10*i, 0, 0, 0, 1))).info(i).to_be(0, 0)
+  end
+  -- TODO: More comprehensive tests?...
+end)
+
 -- ########################
 -- ##### END OF TESTS #####
 -- ########################
