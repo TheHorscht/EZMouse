@@ -29,6 +29,13 @@ return function(props, change_left, change_top, change_right, change_bottom, cor
   local change_right_max = props.constraints.right - (props.x + props.width)
   local change_bottom_max = props.constraints.bottom - (props.y + props.height)
 
+  if props.symmetrical then
+    change_left_min = change_left_min / 2
+    change_top_min = change_top_min / 2
+    change_right_max = change_right_max / 2
+    change_bottom_max = change_bottom_max / 2
+  end
+
   -- Constrain to max sizes
   change_left_min = math.max(change_left_min, props.width - props.max_width)
   change_top_min = math.max(change_top_min, props.height - props.max_height)
@@ -41,6 +48,13 @@ return function(props, change_left, change_top, change_right, change_bottom, cor
   local change_right_min = props.min_width - props.width
   local change_bottom_min = props.min_height - props.height
 
+  if props.symmetrical then
+    change_left_max = change_left_max / 2
+    change_top_max = change_top_max / 2
+    change_right_min = change_right_min / 2
+    change_bottom_min = change_bottom_min / 2
+  end
+
   local min_scale_left = (props.width - change_left_max) / props.width
   local max_scale_left = (props.width - change_left_min) / props.width
   local min_scale_right = (props.width + change_right_min) / props.width
@@ -49,13 +63,6 @@ return function(props, change_left, change_top, change_right, change_bottom, cor
   local max_scale_top = (props.height - change_top_min) / props.height
   local min_scale_bottom = (props.height + change_bottom_min) / props.height
   local max_scale_bottom = (props.height + change_bottom_max) / props.height
-
-  if props.symmetrical then
-    min_scale_left = (props.width - change_left_max / 2) / props.width
-    min_scale_top = (props.height - change_top_max / 2) / props.height
-    min_scale_right = (props.width + change_right_min / 2) / props.width
-    min_scale_bottom = (props.height + change_bottom_min / 2) / props.height
-  end
 
   local aspect_ratio = props.width / props.height
   local origin_of_scaling_x, origin_of_scaling_y = props.width / 2, props.height / 2
