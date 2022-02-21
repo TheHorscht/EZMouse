@@ -29,13 +29,6 @@ return function(props, change_left, change_top, change_right, change_bottom, cor
   local change_right_max = props.constraints.right - (props.x + props.width)
   local change_bottom_max = props.constraints.bottom - (props.y + props.height)
 
-  if props.symmetrical then
-    change_left_min = change_left_min / 2
-    change_top_min = change_top_min / 2
-    change_right_max = change_right_max / 2
-    change_bottom_max = change_bottom_max / 2
-  end
-
   -- Constrain to max sizes
   change_left_min = math.max(change_left_min, props.width - props.max_width)
   change_top_min = math.max(change_top_min, props.height - props.max_height)
