@@ -13,7 +13,12 @@ local function sign(num)
   return num >= 0 and 1 or -1
 end
 
-return function(props, change_left, change_top, change_right, change_bottom, corner)
+return function(props, change_left, change_top, change_right, change_bottom, corner, test)
+  local function print(...)
+    if test then
+      _G.print(...)
+    end
+  end
   props.min_width = props.min_width or 1
   props.min_height = props.min_height or 1
   props.max_width = props.max_width or 999999
@@ -21,19 +26,17 @@ return function(props, change_left, change_top, change_right, change_bottom, cor
   props.symmetrical = not not props.symmetrical
   props.constraints = props.constraints or { left = -999999, top = -999999, right = 999999, bottom = 999999 }
 
-  local resize_horizontally = false
-  local resize_vertically = false
   -- Constrain to boundary constraints
-  local change_left_min = props.constraints.left - props.x
-  local change_top_min = props.constraints.top - props.y
-  local change_right_max = props.constraints.right - (props.x + props.width)
-  local change_bottom_max = props.constraints.bottom - (props.y + props.height)
+  -- local change_left_min = props.constraints.left - props.x
+  -- local change_top_min = props.constraints.top - props.y
+  -- local change_right_max = props.constraints.right - (props.x + props.width)
+  -- local change_bottom_max = props.constraints.bottom - (props.y + props.height)
 
   -- Constrain to max sizes
-  change_left_min = math.max(change_left_min, props.width - props.max_width)
-  change_top_min = math.max(change_top_min, props.height - props.max_height)
-  change_right_max = math.min(change_right_max, props.max_width - props.width)
-  change_bottom_max = math.min(change_bottom_max, props.max_height - props.height)
+  local change_left_min = props.width - props.max_width
+  local change_top_min = props.height - props.max_height
+  local change_right_max = props.max_width - props.width
+  local change_bottom_max = props.max_height - props.height
 
   -- Constrain to min sizes
   local change_left_max = props.width - props.min_width
@@ -46,6 +49,10 @@ return function(props, change_left, change_top, change_right, change_bottom, cor
     change_top_max = change_top_max / 2
     change_right_min = change_right_min / 2
     change_bottom_min = change_bottom_min / 2
+    change_left_min = change_left_min / 2
+    change_top_min = change_top_min / 2
+    change_right_max = change_right_max / 2
+    change_bottom_max = change_bottom_max / 2
   end
 
   local min_scale_left = (props.width - change_left_max) / props.width
@@ -155,15 +162,27 @@ return function(props, change_left, change_top, change_right, change_bottom, cor
   end
 
   if secondary.left then
+    if props.symmetrical then
+      max_scale_left = (max_scale_left - 1) * 2 + 1
+    end
     desired_scale_x = clamp(desired_scale_x, min_scale_left, max_scale_left)
   end
   if secondary.right then
+    if props.symmetrical then
+      max_scale_right = (max_scale_right - 1) * 2 + 1
+    end
     desired_scale_x = clamp(desired_scale_x, min_scale_right, max_scale_right)
   end
   if secondary.top then
+    if props.symmetrical then
+      max_scale_top = (max_scale_top - 1) * 2 + 1
+    end
     desired_scale_y = clamp(desired_scale_y, min_scale_top, max_scale_top)
   end
   if secondary.bottom then
+    if props.symmetrical then
+      max_scale_bottom = (max_scale_bottom - 1) * 2 + 1
+    end
     desired_scale_y = clamp(desired_scale_y, min_scale_bottom, max_scale_bottom)
   end
 
@@ -257,6 +276,72 @@ return function(props, change_left, change_top, change_right, change_bottom, cor
   change_top = change_top * symmetry_multiplier
   change_right = change_right * symmetry_multiplier
   change_bottom = change_bottom * symmetry_multiplier
+
+  -- Now handle outside constraints
+
+  -- Calculate by how much we overshot the constraints, then shrink all related sides equally
+  local overshoot_left = math.max(0, props.constraints.left - (props.x + change_left))
+  local overshoot_top = math.max(0, props.constraints.top - (props.y + change_top))
+  local overshoot_right = math.max(0, (props.x + props.width + change_right) - props.constraints.right)
+  local overshoot_bottom = math.max(0, (props.y + props.height + change_bottom) - props.constraints.bottom)
+
+  local overshoot_scale_left = change_left / (change_left + overshoot_left)
+  local overshoot_scale_top = change_top / (change_top + overshoot_top)
+  local overshoot_scale_right = change_right / (change_right - overshoot_right)
+  local overshoot_scale_bottom = change_bottom / (change_bottom - overshoot_bottom)
+  
+  local function is_nan(val)
+    return val ~= val
+  end
+
+  if is_nan(overshoot_scale_left) then overshoot_scale_left = 0 end
+  if is_nan(overshoot_scale_top) then overshoot_scale_top = 0 end
+  if is_nan(overshoot_scale_right) then overshoot_scale_right = 0 end
+  if is_nan(overshoot_scale_bottom) then overshoot_scale_bottom = 0 end
+  -- Find the biggest overshoot scale and shrink all related sides by that
+  local biggest_overshoot_scale = math.max(overshoot_scale_left, overshoot_scale_top, overshoot_scale_right, overshoot_scale_bottom)
+  if biggest_overshoot_scale > 0 then
+    local scale = 1
+    if props.aspect then
+      scale = biggest_overshoot_scale
+    end
+    if resize_left or secondary.left then
+      scale = math.max(scale, overshoot_scale_left)
+      if props.symmetrical then
+        scale = math.max(scale, overshoot_scale_left, overshoot_scale_right)
+      end
+      if scale > 0 then
+        change_left = change_left / scale
+      end
+    end
+    if resize_right or secondary.right then
+      scale = math.max(scale, overshoot_scale_right)
+      if props.symmetrical then
+        scale = math.max(scale, overshoot_scale_left, overshoot_scale_right)
+      end
+      if scale > 0 then
+        change_right = change_right / scale
+      end
+    end
+    if resize_bottom or secondary.bottom then
+      scale = math.max(scale, overshoot_scale_bottom)
+      if props.symmetrical then
+        scale = math.max(scale, overshoot_scale_top, overshoot_scale_bottom)
+      end
+      if scale > 0 then
+        change_bottom = change_bottom / scale
+      end
+    end
+    if resize_top or secondary.top then
+      scale = math.max(scale, overshoot_scale_top)
+      if props.symmetrical then
+        scale = math.max(scale, overshoot_scale_top, overshoot_scale_bottom)
+      end
+      if scale > 0 then
+        change_top = change_top / scale
+      end
+    end
+  end
 
   if props.quantization then
     local function round(v)

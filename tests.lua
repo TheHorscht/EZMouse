@@ -579,6 +579,60 @@ test("(aspect + quant) Width and height increase only in quant sizes", function(
   -- TODO: More comprehensive tests?...
 end)
 
+test("(symmetrical) Can't resize past max size", function()
+  local props = {
+    x = 0, y = 0,
+    width = 50, height = 50,
+    max_width = 100,
+    symmetrical = true,
+  }
+  expect(update_draggable(props, -333, 0, 0, 0, 1)).to_be(-25, 0, 25, 0)
+  expect(update_draggable(props, -333, 0, 0, 0, 8)).to_be(-25, 0, 25, 0)
+  expect(update_draggable(props, 0, 0, 333, 0, 3)).to_be(-25, 0, 25, 0)
+  expect(update_draggable(props, 0, 0, 333, 0, 4)).to_be(-25, 0, 25, 0)
+end)
+
+test("(aspect + quant + symmetrical) Works", function()
+  local props = {
+    x = 0, y = 0,
+    width = 50, height = 100,
+    aspect = true,
+    symmetrical = true,
+    quantization = 5
+  }
+  local function get_aspect_ratio(props, change_left, change_top, change_right, change_bottom)
+    return calc_width(props, change_left, change_right) % props.quantization, calc_height(props, change_top, change_bottom) % props.quantization
+  end
+  for i=1, 10 do
+    expect(get_aspect_ratio(props, update_draggable(props, 0, -10*i, 0, 0, 2))).info(i).to_be(0, 0)
+    expect(get_aspect_ratio(props, update_draggable(props, 0, -10*i, 0, 0, 1))).info(i).to_be(0, 0)
+    expect(get_aspect_ratio(props, update_draggable(props, -10*i, 0, 0, 0, 1))).info(i).to_be(0, 0)
+  end
+  -- TODO: More comprehensive tests?...
+  expect(update_draggable(props, -5, 0, 0, 0, 1)).to_be(-5, -10, 5, 10)
+end)
+
+test("(aspect + quant + symmetrical) Can't resize past max size", function()
+  local props = {
+    x = 0, y = 0,
+    width = 55, height = 110,
+    max_width = 60, max_height = 200,
+    aspect = true,
+    symmetrical = true,
+    -- quantization = 5
+  }
+  -- expect(false).to_be(true)
+  expect(update_draggable(props, -20, 0, 0, 0, 8)).to_be(-2.5, -5, 2.5, 5)
+  expect(update_draggable(props, 0, -20, 0, 0, 2, true)).to_be(-2.5, -5, 2.5, 5)
+  for i=1, 10 do
+    -- expect(update_draggable(props, 0, -10*i, 0, 0, 2)).info(i).to_be(0, 0)
+    -- expect(update_draggable(props, 0, -10*i, 0, 0, 1)).info(i).to_be(0, 0)
+    -- expect(update_draggable(props, -10*i, 0, 0, 0, 1)).info(i).to_be(0, 0)
+  end
+  -- TODO: More comprehensive tests?...
+  
+end)
+
 -- ########################
 -- ##### END OF TESTS #####
 -- ########################
