@@ -30,7 +30,11 @@ return function(props, change_left, change_top, change_right, change_bottom, cor
   props.max_width = props.max_width or 999999
   props.max_height = props.max_height or 999999
   props.symmetrical = not not props.symmetrical
-  props.constraints = props.constraints or { left = -999999, top = -999999, right = 999999, bottom = 999999 }
+  props.constraints = props.constraints or {}
+  props.constraints.left = props.constraints.left or -999999
+  props.constraints.top = props.constraints.top or -999999
+  props.constraints.right = props.constraints.right or 999999
+  props.constraints.bottom = props.constraints.bottom or 999999
 
   -- Constrain to boundary constraints
   -- local change_left_min = props.constraints.left - props.x
