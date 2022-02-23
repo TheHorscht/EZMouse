@@ -188,6 +188,12 @@ test("Can't resize past constraints", function()
   expect(update_draggable(props, 0, -52, 0, 0, 2)).to_be(0, -20, 0, 0)
   expect(update_draggable(props, 0, 0, 53, 0, 4)).to_be(0, 0, 30, 0)
   expect(update_draggable(props, 0, 0, 0, 54, 6)).to_be(0, 0, 0, 30)
+  local props = {
+    x = 0, y = 0,
+    width = 20, height = 20,
+    constraints = { left = 0, top = 30, right = 100, bottom = 100 }
+  }
+  expect(update_draggable(props, -20, 0, 0, 0, 8)).to_be(0, 0, 0, 0)
 end)
 
 test("Resizer not moving past the opposite side", function()
@@ -436,14 +442,16 @@ test("(aspect) Does not jump when resizing", function()
   expect(update_draggable(props, 0, -42, -22, 0, 3)).to_be(0, feq(-42), feq(21), 0)
 end)
 
-test("(aspect) Constraints work when secondary sides hit them", function()
+only_test("(aspect) Constraints work when secondary sides hit them", function()
   local props = {
     x = 50, y = 20,
     width = 50, height = 100,
     aspect = true,
     constraints = { left = 0, top = 0, right = 200, bottom = 175, }
   }
-  expect(update_draggable(created_merged_table(props, { width = 50, height = 100 }), -25, 0, 0, 0, 8)).to_be(-20, -20, 0, 20)
+  expect(update_draggable(created_merged_table(props, { width = 50, height = 100 }), -40, 0, 0, 0, 8)).to_be(-20, -20, 0, 20)
+  expect(update_draggable(created_merged_table(props, { width = 50, height = 100, constraints = { bottom = 200 } }), -30, 0, 0, 0, 8)).to_be(-20, -20, 0, 20)
+  expect(update_draggable(created_merged_table(props, { width = 30, height = 100, constraints = { bottom = 200 } }), -30, 0, 0, 0, 8)).to_be(-12, -20, 0, 20)
   expect(update_draggable(created_merged_table(props, { x = 10, y = 50, width = 100, height = 50 }), 0, -100, 0, 0, 2)).to_be(-10, -10, 10, 0)
   local props2 = created_merged_table(props, { x = 150, y = 50, constraints = { bottom = 500 } })
   expect(update_draggable(props2, 0, -100, 0, 0, 2)).to_be(0, 0, 0, 0)
@@ -623,11 +631,11 @@ test("(aspect + quant + symmetrical) Can't resize past max size", function()
   }
   -- expect(false).to_be(true)
   expect(update_draggable(props, -20, 0, 0, 0, 8)).to_be(-2.5, -5, 2.5, 5)
-  expect(update_draggable(props, 0, -20, 0, 0, 2, true)).to_be(-2.5, -5, 2.5, 5)
+  expect(update_draggable(props, 0, -20, 0, 0, 2)).to_be(-2.5, -5, 2.5, 5)
   for i=1, 10 do
-    -- expect(update_draggable(props, 0, -10*i, 0, 0, 2)).info(i).to_be(0, 0)
-    -- expect(update_draggable(props, 0, -10*i, 0, 0, 1)).info(i).to_be(0, 0)
-    -- expect(update_draggable(props, -10*i, 0, 0, 0, 1)).info(i).to_be(0, 0)
+    expect(update_draggable(props, 0, -10*i, 0, 0, 2)).info(i).to_be(-2.5, -5, 2.5, 5)
+    expect(update_draggable(props, 0, -10*i, 0, 0, 1)).info(i).to_be(-2.5, -5, 2.5, 5)
+    expect(update_draggable(props, -10*i, 0, 0, 0, 1)).info(i).to_be(-2.5, -5, 2.5, 5)
   end
   -- TODO: More comprehensive tests?...
   

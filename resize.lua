@@ -4,6 +4,12 @@ local function clamp(value, min, max)
 	return value
 end
 
+-- Returns the value if it's not nil, otherwise returns val_if_nan
+local function safe_divide(val, val_if_nan)
+  local is_nan = val ~= val
+  return is_nan and val_if_nan or val
+end
+
 -- float equals
 local function feq(v1, v2)
   return math.abs(v1 - v2) < 0.001
@@ -121,8 +127,6 @@ return function(props, change_left, change_top, change_right, change_bottom, cor
       secondary.top = true
       secondary.bottom = true
     end
-    desired_scale_x = clamp(desired_scale_x, min_scale_left, max_scale_left)
-    desired_scale_x = math.max(desired_scale_x, 0)
   end
 
   if resize_top then
@@ -133,8 +137,6 @@ return function(props, change_left, change_top, change_right, change_bottom, cor
       secondary.left = true
       secondary.right = true
     end
-    desired_scale_y = clamp(desired_scale_y, min_scale_top, max_scale_top)
-    desired_scale_y = math.max(desired_scale_y, 0)
   end
 
   if resize_right then
@@ -145,8 +147,6 @@ return function(props, change_left, change_top, change_right, change_bottom, cor
       secondary.top = true
       secondary.bottom = true
     end
-    desired_scale_x = clamp(desired_scale_x, min_scale_right, max_scale_right)
-    desired_scale_x = math.max(desired_scale_x, 0)
   end
 
   if resize_bottom then
@@ -157,6 +157,42 @@ return function(props, change_left, change_top, change_right, change_bottom, cor
       secondary.left = true
       secondary.right = true
     end
+  end
+
+  if resize_left or resize_right then
+    if secondary.top then
+      desired_scale_x = math.min(desired_scale_x, max_scale_top)
+    end
+    if secondary.bottom then
+      desired_scale_x = math.min(desired_scale_x, max_scale_bottom)
+    end
+  end
+
+  if resize_top or resize_bottom then
+    if secondary.left then
+      desired_scale_y = math.min(desired_scale_y, max_scale_left)
+    end
+    if secondary.right then
+      desired_scale_y = math.min(desired_scale_y, max_scale_right)
+    end
+  end
+
+  if resize_left then
+    desired_scale_x = clamp(desired_scale_x, min_scale_left, max_scale_left)
+    desired_scale_x = math.max(desired_scale_x, 0)
+  end
+
+  if resize_top then
+    desired_scale_y = clamp(desired_scale_y, min_scale_top, max_scale_top)
+    desired_scale_y = math.max(desired_scale_y, 0)
+  end
+
+  if resize_right then
+    desired_scale_x = clamp(desired_scale_x, min_scale_right, max_scale_right)
+    desired_scale_x = math.max(desired_scale_x, 0)
+  end
+
+  if resize_bottom then
     desired_scale_y = clamp(desired_scale_y, min_scale_bottom, max_scale_bottom)
     desired_scale_y = math.max(desired_scale_y, 0)
   end
@@ -285,62 +321,50 @@ return function(props, change_left, change_top, change_right, change_bottom, cor
   local overshoot_right = math.max(0, (props.x + props.width + change_right) - props.constraints.right)
   local overshoot_bottom = math.max(0, (props.y + props.height + change_bottom) - props.constraints.bottom)
 
-  local overshoot_scale_left = change_left / (change_left + overshoot_left)
-  local overshoot_scale_top = change_top / (change_top + overshoot_top)
-  local overshoot_scale_right = change_right / (change_right - overshoot_right)
-  local overshoot_scale_bottom = change_bottom / (change_bottom - overshoot_bottom)
-  
-  local function is_nan(val)
-    return val ~= val
+  local function safe_division(val, value_if_nan)
+    local is_nan = val ~= val
+    return is_nan and value_if_nan or val
   end
+  -- if this is 0.1 it means it overshoots by 10% of its change_left
+  local overshoot_scale_left = math.abs(safe_division(overshoot_left / change_left, 0))
+  local overshoot_scale_top = math.abs(safe_division(overshoot_top / change_top, 0))
+  local overshoot_scale_right = math.abs(safe_division(overshoot_right / change_right, 0))
+  local overshoot_scale_bottom = math.abs(safe_division(overshoot_bottom / change_bottom, 0))
 
-  if is_nan(overshoot_scale_left) then overshoot_scale_left = 0 end
-  if is_nan(overshoot_scale_top) then overshoot_scale_top = 0 end
-  if is_nan(overshoot_scale_right) then overshoot_scale_right = 0 end
-  if is_nan(overshoot_scale_bottom) then overshoot_scale_bottom = 0 end
   -- Find the biggest overshoot scale and shrink all related sides by that
   local biggest_overshoot_scale = math.max(overshoot_scale_left, overshoot_scale_top, overshoot_scale_right, overshoot_scale_bottom)
-  if biggest_overshoot_scale > 0 then
-    local scale = 1
-    if props.aspect then
-      scale = biggest_overshoot_scale
+  local scale = 0
+  if props.aspect then
+    scale = biggest_overshoot_scale
+  end
+  if resize_left or secondary.left then
+    scale = math.max(scale, overshoot_scale_left)
+    if props.symmetrical then
+      scale = math.max(scale, overshoot_scale_left, overshoot_scale_right)
     end
-    if resize_left or secondary.left then
-      scale = math.max(scale, overshoot_scale_left)
-      if props.symmetrical then
-        scale = math.max(scale, overshoot_scale_left, overshoot_scale_right)
-      end
-      if scale > 0 then
-        change_left = change_left / scale
-      end
+
+    change_left = change_left * (1 - scale)
+  end
+  if resize_right or secondary.right then
+    scale = math.max(scale, overshoot_scale_right)
+    if props.symmetrical then
+      scale = math.max(scale, overshoot_scale_left, overshoot_scale_right)
     end
-    if resize_right or secondary.right then
-      scale = math.max(scale, overshoot_scale_right)
-      if props.symmetrical then
-        scale = math.max(scale, overshoot_scale_left, overshoot_scale_right)
-      end
-      if scale > 0 then
-        change_right = change_right / scale
-      end
+    change_right = change_right * (1 - scale)
+  end
+  if resize_bottom or secondary.bottom then
+    scale = math.max(scale, overshoot_scale_bottom)
+    if props.symmetrical then
+      scale = math.max(scale, overshoot_scale_top, overshoot_scale_bottom)
     end
-    if resize_bottom or secondary.bottom then
-      scale = math.max(scale, overshoot_scale_bottom)
-      if props.symmetrical then
-        scale = math.max(scale, overshoot_scale_top, overshoot_scale_bottom)
-      end
-      if scale > 0 then
-        change_bottom = change_bottom / scale
-      end
+    change_bottom = change_bottom * (1 - scale)
+  end
+  if resize_top or secondary.top then
+    scale = math.max(scale, overshoot_scale_top)
+    if props.symmetrical then
+      scale = math.max(scale, overshoot_scale_top, overshoot_scale_bottom)
     end
-    if resize_top or secondary.top then
-      scale = math.max(scale, overshoot_scale_top)
-      if props.symmetrical then
-        scale = math.max(scale, overshoot_scale_top, overshoot_scale_bottom)
-      end
-      if scale > 0 then
-        change_top = change_top / scale
-      end
-    end
+    change_top = change_top * (1 - scale)
   end
 
   if props.quantization then
