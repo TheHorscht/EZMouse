@@ -442,7 +442,7 @@ test("(aspect) Does not jump when resizing", function()
   expect(update_draggable(props, 0, -42, -22, 0, 3)).to_be(0, feq(-42), feq(21), 0)
 end)
 
-only_test("(aspect) Constraints work when secondary sides hit them", function()
+test("(aspect) Constraints work when secondary sides hit them", function()
   local props = {
     x = 50, y = 20,
     width = 50, height = 100,
@@ -639,6 +639,16 @@ test("(aspect + quant + symmetrical) Can't resize past max size", function()
   end
   -- TODO: More comprehensive tests?...
   
+end)
+
+test("When resizing corners and going over constraints, don't do the weird thing", function()
+  local props = {
+    x = 5, y = 10,
+    width = 50, height = 100,
+    constraints = { top = 0, left = 0 }
+  }
+  expect(update_draggable(props, -20, -20, 0, 0, 1)).to_be(-5, -10, 0, 0)
+  -- TODO: More comprehensive tests?...
 end)
 
 -- ########################

@@ -342,7 +342,7 @@ return function(props, change_left, change_top, change_right, change_bottom, cor
     scale = biggest_overshoot_scale
   end
   if resize_left or secondary.left then
-    scale = math.max(scale, overshoot_scale_left)
+    local scale = math.max(scale, overshoot_scale_left)
     if props.symmetrical then
       scale = math.max(scale, overshoot_scale_left, overshoot_scale_right)
     end
@@ -350,21 +350,21 @@ return function(props, change_left, change_top, change_right, change_bottom, cor
     change_left = change_left * (1 - scale)
   end
   if resize_right or secondary.right then
-    scale = math.max(scale, overshoot_scale_right)
+    local scale = math.max(scale, overshoot_scale_right)
     if props.symmetrical then
       scale = math.max(scale, overshoot_scale_left, overshoot_scale_right)
     end
     change_right = change_right * (1 - scale)
   end
   if resize_bottom or secondary.bottom then
-    scale = math.max(scale, overshoot_scale_bottom)
+    local scale = math.max(scale, overshoot_scale_bottom)
     if props.symmetrical then
       scale = math.max(scale, overshoot_scale_top, overshoot_scale_bottom)
     end
     change_bottom = change_bottom * (1 - scale)
   end
   if resize_top or secondary.top then
-    scale = math.max(scale, overshoot_scale_top)
+    local scale = math.max(scale, overshoot_scale_top)
     if props.symmetrical then
       scale = math.max(scale, overshoot_scale_top, overshoot_scale_bottom)
     end
