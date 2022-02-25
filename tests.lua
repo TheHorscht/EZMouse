@@ -651,6 +651,32 @@ test("When resizing corners and going over constraints, don't do the weird thing
   -- TODO: More comprehensive tests?...
 end)
 
+test("(quant) Resize up to contraints, don't stop before hitting them when the gap is very very small (< 0.000001)", function()
+  local props = {
+    x = 52.50, y = 167.50,
+    width = 35, min_width = 25, max_width = 100,
+    height = 70, min_height = 50, max_height = 200,
+    constraints = {
+      left = 50,
+      top = 50,
+      right = 90,
+      bottom = 300
+    },
+    aspect = true,
+    quantization = 5,
+  }
+
+  -- update_draggable(props, 0, -73, 0, 0, 2, true)
+  -- update_draggable(props, 0, -74, 0, 0, 2, true)
+  -- update_draggable(props, 0, -75, 0, 0, 2, true)
+
+  expect(update_draggable(props, 0, -74, 0, 0, 2, true)).to_be(-2.5, -10, 2.5, 0)
+  expect(update_draggable(props, 0, -75, 0, 0, 2, true)).to_be(-2.5, -10, 2.5, 0)
+  expect(update_draggable(props, 0, -76, 0, 0, 2)).to_be(-2.5, -10, 2.5, 0)
+  expect(update_draggable(props, 0, -77, 0, 0, 2)).to_be(-2.5, -10, 2.5, 0)
+  -- TODO: More comprehensive tests?...
+end)
+
 -- ########################
 -- ##### END OF TESTS #####
 -- ########################

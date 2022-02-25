@@ -371,6 +371,32 @@ return function(props, change_left, change_top, change_right, change_bottom, cor
     change_top = change_top * (1 - scale)
   end
 
+  -- If very very close to the constraints, just "round up" to them and also adjust related sides by the same amount
+  local left = props.x + change_left
+  if left - props.constraints.left >= 0 and left - props.constraints.left < 0.00001 then
+    local new_change_left = props.constraints.left - props.x
+    change_right = change_right + (change_left - new_change_left)
+    change_left = new_change_left
+  end
+  local top = props.y + change_top
+  if top - props.constraints.top >= 0 and top - props.constraints.top < 0.00001 then
+    local new_change_top = props.constraints.top - props.y
+    change_bottom = change_bottom + (change_top - new_change_top)
+    change_top = new_change_top
+  end
+  local right = props.x + props.width + change_right
+  if props.constraints.right - right >= 0 and props.constraints.right - right < 0.00001 then
+    local new_change_right = props.constraints.right - (props.x + props.width)
+    change_left = change_left + (change_right - new_change_right)
+    change_right = new_change_right
+  end
+  local bottom = props.y + props.height + change_bottom
+  if props.constraints.bottom - bottom >= 0 and props.constraints.bottom - bottom < 0.00001 then
+    local new_change_bottom = props.constraints.bottom - (props.y + props.height)
+    change_top = change_top + (change_bottom - new_change_bottom)
+    change_bottom = new_change_bottom
+  end
+
   if props.quantization then
     local function round(v)
       if v > 0 then
@@ -393,22 +419,16 @@ return function(props, change_left, change_top, change_right, change_bottom, cor
       local new_scale = 1
       -- Take the dimension scale increase of the smaller size
       if props.width < props.height then
-        local scale_increase_left = 1 - (props.width + change_left) / props.width
-        local scale_increase_right = 1 - (props.width - change_right) / props.width
-        local width_percent_increase = scale_increase_left + scale_increase_right
-        local actual_width_increase = props.width * width_percent_increase
-        local quantized_actual_width_increase = round(actual_width_increase / props.quantization) * props.quantization
-        new_scale = (props.width + quantized_actual_width_increase) / props.width
+        local width_increase = -change_left + change_right
+        local quantized_width_increase = round(width_increase / props.quantization) * props.quantization
+        new_scale = (props.width + quantized_width_increase) / props.width
       else
-        local scale_increase_top = 1 - (props.height + change_top) / props.height
-        local scale_increase_bottom = 1 - (props.height - change_bottom) / props.height
-        local height_percent_increase = scale_increase_top + scale_increase_bottom
-        local actual_height_increase = props.height * height_percent_increase
-        local quantized_actual_height_increase = round(actual_height_increase / props.quantization) * props.quantization
-        new_scale = (props.height + quantized_actual_height_increase) / props.height
+        local height_increase = -change_top + change_bottom
+        local quantized_height_increase = round(height_increase / props.quantization) * props.quantization
+        new_scale = (props.height + quantized_height_increase) / props.height
       end
-
-      change_left = scale_x_percent * props.width * (1 - new_scale)
+      
+      change_left = scale_x_percent * props.width * (1 - new_scale)     
       change_top = scale_y_percent * props.height * (1 - new_scale)
       change_right = (1 - scale_x_percent) * -props.width * (1 - new_scale)
       change_bottom = (1 - scale_y_percent) * -props.height * (1 - new_scale)
