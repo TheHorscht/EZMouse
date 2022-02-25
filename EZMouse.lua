@@ -1,9 +1,8 @@
 -- ====================
--- || EZMouse v0.2.0-dirty ||
+-- || EZMouse v0.3.0 ||
 -- ====================
 
 dofile_once("data/scripts/lib/utilities.lua")
-local update_draggable = dofile_once("mods/dragging/lib/EZMouse/resize.lua")
 
 local path, world_x, world_y, sx, sy, dx, dy, left_down, left_pressed, right_down, right_pressed,
   left_down_last_frame, right_down_last_frame
@@ -171,7 +170,7 @@ function Widget:__call(props)
     max_height = props.max_height or 999999,
     draggable = props.draggable == nil and true or not not props.draggable,
     drag_anchor = props.drag_anchor or nil, -- either "center" or nil
-    drag_granularity = props.drag_granularity or 0.1,
+    drag_granularity = props.drag_granularity or 0.1, -- NOT IMPLEMENTED
     resizable = not not props.resizable,
     resize_granularity = props.resize_granularity or 0.1,
     resize_symmetrical = not not props.resize_symmetrical,
@@ -180,7 +179,7 @@ function Widget:__call(props)
     hoverable = props.hoverable == nil and true or not not props.hoverable,
     constraints = validate_constraints(props.constraints),
     event_listeners = {
-      mouse_down = {},
+      -- mouse_down = {}, -- Doesn't work anymore with the new method
       drag = {},
       drag_start = {},
       drag_end = {},
@@ -234,7 +233,7 @@ function Widget:RemoveEventListener(event_name, listener)
 end
 
 function Widget:DebugDraw(gui, sprite)
-  GuiIdPushString(EZMouse_gui, "EZMouse_debug_draw_" .. tostring(widget_privates[self].id))
+  GuiIdPushString(gui, "EZMouse_debug_draw_" .. tostring(widget_privates[self].id))
   GuiOptionsAddForNextWidget(gui, GUI_OPTION.NonInteractive)
   GuiZSetForNextWidget(gui, self.z)
   GuiImage(gui, 2, self.x, self.y, path .. (widget_privates[self].hovered and "green_square_10x10.png" or (sprite or "red") .. "_square_10x10.png"), 1, self.width / 10, self.height / 10)
@@ -243,7 +242,7 @@ function Widget:DebugDraw(gui, sprite)
     GuiZSetForNextWidget(gui, self.z - 0.5)
     GuiImage(gui, 3, widget_privates[self].resize_handle.x, widget_privates[self].resize_handle.y, path .. "green_square_10x10.png", 1, widget_privates[self].resize_handle.width / 10, widget_privates[self].resize_handle.height / 10)
   end
-  GuiIdPop(EZMouse_gui)
+  GuiIdPop(gui)
 end
 
 setmetatable(Widget, Widget)
@@ -415,6 +414,7 @@ local function update(gui)
         local change_top = dy * -math.min(widget_privates[draggable].resize_handle.move[2], 0)
         local change_bottom = dy * math.max(widget_privates[draggable].resize_handle.move[2], 0)
 
+        local update_draggable = dofile_once(path .. "resize.lua")
         change_left, change_top, change_right, change_bottom = update_draggable({
           x = resize_start_x, y = resize_start_y,
           width = resize_start_width,
