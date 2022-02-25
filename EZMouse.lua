@@ -1,5 +1,5 @@
 -- ====================
--- || EZMouse v0.3.1 ||
+-- || EZMouse v0.3.2 ||
 -- ====================
 
 dofile_once("data/scripts/lib/utilities.lua")
@@ -387,7 +387,6 @@ local function update(gui)
       local draggable = dragging_draggable
       local result = render_dragging_widget_at_mouse_pos(draggable.x, draggable.y)
       if result.was_dragged then
-        fire_event(draggable, "drag", { dx = result.dx, dy = result.dy })
         local drag_offset_x = result.drag_offset_x
         local drag_offset_y = result.drag_offset_y
         if draggable.drag_anchor == "center" then
@@ -396,6 +395,7 @@ local function update(gui)
         end
         draggable.x = math.min((draggable.constraints.right or 99999) - draggable.width, math.max(draggable.constraints.left or 0, sx - drag_offset_x))
         draggable.y = math.min((draggable.constraints.bottom or 99999) - draggable.height, math.max(draggable.constraints.top or 0, sy - drag_offset_y))
+        fire_event(draggable, "drag", { dx = result.dx, dy = result.dy })
       end
       if result.drag_end then
         widget_privates[draggable].dragging = false
