@@ -1,3 +1,8 @@
+v0.3.0:
+- Reworked resizing, should now work correctly and supports quantizing, keeping aspect ratio and symmetrical resizing
+- Resizing: Added constraints, which lets you define an area where you can't resize outside
+- Resizing: Added max_width and max_height
+
 v0.2.0:
 - Reworked dragging detection, now uses GuiImageButton instead of checking left mouse down,
   which means it uses the native mouse event blocking functionality instead of manually disabling wand shooting etc
