@@ -1,3 +1,6 @@
+v0.3.1:
+- Fix resize detection not working
+
 v0.3.0:
 - Reworked resizing, should now work correctly and supports quantizing, keeping aspect ratio and symmetrical resizing
 - Resizing: Added constraints, which lets you define an area where you can't resize outside

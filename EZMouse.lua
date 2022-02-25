@@ -1,5 +1,5 @@
 -- ====================
--- || EZMouse v0.3.0 ||
+-- || EZMouse v0.3.1 ||
 -- ====================
 
 dofile_once("data/scripts/lib/utilities.lua")
@@ -10,6 +10,7 @@ local drag_start_sx, drag_start_sy = 0, 0
 local resize_start_x, resize_start_y = 0, 0
 local resize_start_sx, resize_start_sy = 0, 0
 local resize_start_width, resize_start_height = 0, 0
+local resize_last_width_fired, resize_last_height_fired = 0, 0
 local current_widget_id = 1
 local do_draw_resize_cursor = false
 local resize_handle_size = 8
@@ -375,6 +376,8 @@ local function update(gui)
         resize_start_y = draggable.y
         resize_start_width = draggable.width
         resize_start_height = draggable.height
+        resize_last_width_fired = draggable.width -- For detecting whether it was resized or not (especially when quantized)
+        resize_last_height_fired = draggable.height
         aspect_ratio = draggable.width / draggable.height
       end
     end
@@ -437,9 +440,11 @@ local function update(gui)
         -- Recalculate the values
         local resize_handles = calculate_handle_props(draggable, resize_handle_size)
         widget_privates[draggable].resize_handle = resize_handles[widget_privates[draggable].resize_handle_index]
-        local has_moved = false --math.abs(width_change) > 0.5 or math.abs(height_change) > 0.5
+        local has_moved = resize_last_width_fired ~= draggable.width or resize_last_height_fired ~= draggable.height
         if has_moved then
           fire_event(draggable, "resize", { handle_index = widget_privates[draggable].resize_handle_index })
+          resize_last_width_fired = draggable.width
+          resize_last_height_fired = draggable.height
         end
       end
       if result.drag_end then
