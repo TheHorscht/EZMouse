@@ -48,19 +48,19 @@ It merely provides an invisible area on the screen which catches and reacts to m
 Here's how to create a widget:
 ```lua
 local widget = EZMouse.Widget({
-	x = 100,
-	y = 50,
- -- Z index, higher = further in the back, widgets in the front will block mouse events for widgets in the back
-	z = 1,
+  x = 100,
+  y = 50,
+  -- Z index, higher = further in the back, widgets in the front will block mouse events for widgets in the back
+  z = 1,
   min_width = 25, -- Can't be resized smalled than that
-	width = 50,
+  width = 50,
   max_width = 100, -- Can't be resized bigger than that
   min_height = 25,
-	height = 50,
+  height = 50,
   max_height = 100,
-	resizable = false,
+  resizable = false,
   draggable = false,
-	enabled = false, -- If disabled will not be interactable at all
+  enabled = false, -- If disabled will not be interactable at all
   drag_anchor = "center", -- Either "center" or nil, defines where it should be dragged from
   resize_granularity = 10, -- Makes resizing only happen in increments of 10
   resize_symmetrical = true, -- Will resize opposite sides too if enabled
