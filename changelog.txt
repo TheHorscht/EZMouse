@@ -1,3 +1,6 @@
+UNRELEASED:
+- Add Widget:Destroy() and make debug draw translucent
+
 v0.3.2:
 - Fix Widget:drag event being fired before the widget is actually moved, will now be called when it's done moving so you get the new position
 

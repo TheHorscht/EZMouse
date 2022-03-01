@@ -237,13 +237,21 @@ function Widget:DebugDraw(gui, sprite)
   GuiIdPushString(gui, "EZMouse_debug_draw_" .. tostring(widget_privates[self].id))
   GuiOptionsAddForNextWidget(gui, GUI_OPTION.NonInteractive)
   GuiZSetForNextWidget(gui, self.z)
-  GuiImage(gui, 2, self.x, self.y, path .. (widget_privates[self].hovered and "green_square_10x10.png" or (sprite or "red") .. "_square_10x10.png"), 1, self.width / 10, self.height / 10)
+  GuiImage(gui, 2, self.x, self.y, path .. (widget_privates[self].hovered and "green_square_10x10.png" or (sprite or "red") .. "_square_10x10.png"),0.5, self.width / 10, self.height / 10)
   if widget_privates[self].resize_handle_hovered or widget_privates[self].resize_handle_index then
     GuiOptionsAddForNextWidget(gui, GUI_OPTION.NonInteractive)
     GuiZSetForNextWidget(gui, self.z - 0.5)
     GuiImage(gui, 3, widget_privates[self].resize_handle.x, widget_privates[self].resize_handle.y, path .. "green_square_10x10.png", 1, widget_privates[self].resize_handle.width / 10, widget_privates[self].resize_handle.height / 10)
   end
   GuiIdPop(gui)
+end
+
+function Widget:Destroy()
+  for i=#widget_instances, 1, -1 do
+    if widget_instances[i] == self then
+      table.remove(widget_instances, i)
+    end
+  end
 end
 
 setmetatable(Widget, Widget)
@@ -497,4 +505,3 @@ return function(lib_path)
     end,
   })  
 end
-
