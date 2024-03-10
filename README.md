@@ -9,7 +9,12 @@ local EZMouse = dofile_once("mods/yourmod/lib/EZMouse/EZMouse.lua")("mods/yourmo
 ```
 ## Usage
 EZMouse needs a gui object (created using GuiCreate()) to work and has to have its update function called every frame.
-You can either pass in an already existing one, or it will create one by itself. Also make sure to call EZMouse.update() AFTER GuiStartFrame().
+You also need to call GuiStartFrame(gui) before EZMouse.update().
+```lua
+gui = gui or GuiCreate()
+GuiStartFrame(gui)
+EZMouse.update(gui)
+```
 After that, the library is ready to use. -- For instance you can get variousthe current world and screen position of the mouse cursor using:
 ### Mouse coordinates
 - **number** `EZMouse.screen_x`

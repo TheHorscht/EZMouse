@@ -27,7 +27,7 @@ local dragging_widget = {
   last_frame_ran = 0,
 }
 -- Renders a widget at the mouse potion and returns the change in position from being dragged
-local function render_dragging_widget_at_mouse_pos(current_x, current_y)
+local function render_dragging_widget_at_mouse_pos(gui, current_x, current_y)
   local pos_x, pos_y = sx - 50/2, sy - 50/2
   if dragging_widget.last_frame_ran >= GameGetFrameNum() then
     -- We only need to render it once, it it has already been rendered this frame, return the last result
@@ -40,16 +40,17 @@ local function render_dragging_widget_at_mouse_pos(current_x, current_y)
   dragging_widget.result.was_dragged = false
   dragging_widget.result.drag_start = false
   dragging_widget.result.drag_end = false
-  GuiIdPushString(EZMouse_gui, "boo")
-  GuiOptionsAddForNextWidget(EZMouse_gui, GUI_OPTION.NoPositionTween)
-  GuiOptionsAddForNextWidget(EZMouse_gui, GUI_OPTION.ClickCancelsDoubleClick)
-  GuiOptionsAddForNextWidget(EZMouse_gui, GUI_OPTION.DrawNoHoverAnimation)
-  GuiOptionsAddForNextWidget(EZMouse_gui, GUI_OPTION.NoSound)
-  GuiOptionsAddForNextWidget(EZMouse_gui, GUI_OPTION.IsExtraDraggable)
-  GuiZSetForNextWidget(EZMouse_gui, -999999)
+  GuiIdPushString(gui, "boo")
+  GuiOptionsAddForNextWidget(gui, GUI_OPTION.NoPositionTween)
+  GuiOptionsAddForNextWidget(gui, GUI_OPTION.ClickCancelsDoubleClick)
+  GuiOptionsAddForNextWidget(gui, GUI_OPTION.DrawNoHoverAnimation)
+  GuiOptionsAddForNextWidget(gui, GUI_OPTION.NoSound)
+  GuiOptionsAddForNextWidget(gui, GUI_OPTION.IsExtraDraggable)
+  GuiZSetForNextWidget(gui, 999999)
+  -- GuiZSetForNextWidget(gui, -999999)
   -- Draw an invisible image button that catches the native dragging
-  GuiImageButton(EZMouse_gui, 3, pos_x, pos_y, "", path .. "invis.png")
-  local _, _, _, _, _, _, _, dx, dy = GuiGetPreviousWidgetInfo(EZMouse_gui)
+  GuiImageButton(gui, 3, pos_x, pos_y, "", path .. "invis.png")
+  local _, _, _, _, _, _, _, dx, dy = GuiGetPreviousWidgetInfo(gui)
   if (not are_floats_equal(dx, pos_x) or not are_floats_equal(dy, pos_y)) and dx ~= 0 and dy ~= 0 then
     if not dragging_widget.last_x then
       dragging_widget.last_x = dx
@@ -74,7 +75,7 @@ local function render_dragging_widget_at_mouse_pos(current_x, current_y)
     dragging_widget.last_y = nil
     dragging_widget.result.drag_end = true
   end
-  GuiIdPop(EZMouse_gui)
+  GuiIdPop(gui)
   return dragging_widget.result
 end
 
@@ -290,10 +291,10 @@ local function RemoveEventListener(event_name, listener)
   error("Cannot remove a listener that was never registered.", 2)
 end
 
+local last_frame_updated = 0
 local function update(gui)
-  EZMouse_gui = EZMouse_gui or gui or GuiCreate()
-  if not gui then GuiStartFrame(EZMouse_gui) end
-
+  if last_frame_updated == GameGetFrameNum() then return end
+  last_frame_updated = GameGetFrameNum()
 	if not controls_component then
 		local entity_name = "EZMouse_controls_entity"
 		local controls_entity = EntityGetWithName(entity_name)
@@ -312,7 +313,7 @@ local function update(gui)
     right_down = ComponentGetValue2(controls_component, "mButtonDownRightClick")
     right_pressed = ComponentGetValue2(controls_component, "mButtonFrameRightClick") == GameGetFrameNum()
 
-    local screen_width, screen_height = GuiGetScreenDimensions(EZMouse_gui)
+    local screen_width, screen_height = GuiGetScreenDimensions(gui)
     local mouse_raw_x, mouse_raw_y = ComponentGetValue2(controls_component, "mMousePositionRaw")
     sx, sy = mouse_raw_x * screen_width / 1280, mouse_raw_y * screen_height / 720
 
@@ -358,7 +359,7 @@ local function update(gui)
 
     if hovered_draggable and hovered_draggable.draggable then
       local draggable = hovered_draggable
-      local result = render_dragging_widget_at_mouse_pos(draggable.x, draggable.y)
+      local result = render_dragging_widget_at_mouse_pos(gui, draggable.x, draggable.y)
       if result.drag_start then
         widget_privates[draggable].dragging = true
         dragging_draggable = draggable
@@ -369,7 +370,7 @@ local function update(gui)
     end
     if resize_handle_hovered_draggable then
       local draggable = resize_handle_hovered_draggable.draggable
-      local result = render_dragging_widget_at_mouse_pos(draggable.x, draggable.y)
+      local result = render_dragging_widget_at_mouse_pos(gui, draggable.x, draggable.y)
       if do_draw_resize_cursor then
         draw_resize_cursor(gui, resize_handle_hovered_draggable.handle_index, sx, sy)
       end
@@ -393,7 +394,7 @@ local function update(gui)
     if dragging_draggable then
       -- Here happens the dragging
       local draggable = dragging_draggable
-      local result = render_dragging_widget_at_mouse_pos(draggable.x, draggable.y)
+      local result = render_dragging_widget_at_mouse_pos(gui, draggable.x, draggable.y)
       if result.was_dragged then
         local drag_offset_x = result.drag_offset_x
         local drag_offset_y = result.drag_offset_y
@@ -413,7 +414,7 @@ local function update(gui)
     elseif resizing_draggable then
       -- Here happens the resizing
       local draggable = resizing_draggable
-      local result = render_dragging_widget_at_mouse_pos(draggable.x, draggable.y)
+      local result = render_dragging_widget_at_mouse_pos(gui, draggable.x, draggable.y)
       if do_draw_resize_cursor then
         draw_resize_cursor(gui, widget_privates[draggable].resize_handle_index, sx, sy)
       end
