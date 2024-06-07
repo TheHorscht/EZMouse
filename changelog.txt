@@ -1,4 +1,8 @@
-UNRELEASED:
+v0.4.0:
+- Use new InputIsMouseButtonDown API, making dragging more responsive and reliant
+- Add drag_anchor = "left_top"
+- Add widget mouse_down(self, ev), where ev is { button = "left"|"right" }
+- Add widget mouse_up(self, ev), where ev is { button = "left"|"right" }
 - Add Widget:Destroy() and make debug draw translucent
 
 v0.3.2:
