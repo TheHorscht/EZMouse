@@ -5,7 +5,8 @@ A utility library for Noita which helps with getting the cursor position on the 
 ## Installation
 Download a release, then place all the files into a subfolder of your mod and then initialize it by dofiling the main file, which will return an init function into which you pass the path to the folder you put the EZWand library in. This needs to be done once at (every) startup.
 ```lua
-local EZMouse = dofile_once("mods/yourmod/lib/EZMouse/EZMouse.lua")("mods/yourmod/lib/EZMouse/")
+-- Don't use dofile_once, since that can bug out if doing it twice in the same lua context
+local EZMouse = dofile("mods/yourmod/lib/EZMouse/EZMouse.lua")("mods/yourmod/lib/EZMouse/")
 ```
 ## Usage
 EZMouse needs a gui object (created using GuiCreate()) to work and has to have its update function called every frame.
