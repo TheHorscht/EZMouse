@@ -212,6 +212,7 @@ function Widget:__call(props)
     event_listeners = {
       mouse_down = {},
       mouse_up = {},
+      shift_click = {},
       drag = {},
       drag_start = {},
       drag_end = {},
@@ -325,8 +326,11 @@ end
 local focused_draggable = nil
 local mouse_loop_last_sx = 0
 local mouse_loop_last_sy = 0
-local function update(gui)
-  if dragging_widget.drag_start_init then
+local function update(gui, enabled)
+  if enabled == nil then
+    enabled = true
+  end
+  if dragging_widget.drag_start_init and enabled then
     render_dragging_widget_at_mouse_pos(gui, dragging_widget.drag_start_init.x, dragging_widget.drag_start_init.y, dragging_widget.callbacks)
   end
 
@@ -395,111 +399,123 @@ local function update(gui)
       end
     end
 
-    if hovered_draggable and hovered_draggable.draggable and not dragging_draggable then
-      if mouse_state.left_pressed then
-        focused_draggable = hovered_draggable
-      end
-      local draggable = hovered_draggable
-      if mouse_state.left_pressed then fire_event(draggable, "mouse_down", { button = "left"}) end
-      if mouse_state.right_pressed then fire_event(draggable, "mouse_down", { button = "right"}) end
-      render_dragging_widget_at_mouse_pos(gui, draggable.x, draggable.y, {
-        drag_start = function(result)
-          widget_privates[draggable].dragging = true
-          dragging_draggable = draggable
-          fire_event(draggable, "drag_start")
-        end,
-        was_dragged = function(result)
-          local drag_offset_x = result.drag_offset_x
-          local drag_offset_y = result.drag_offset_y
-          if draggable.drag_anchor == "center" then
-            drag_offset_x = draggable.width / 2
-            drag_offset_y = draggable.height / 2
-          elseif draggable.drag_anchor == "top_left" then
-            drag_offset_x = 0
-            drag_offset_y = 0
+    -- Put the following code into an IIFE to allow breaking out on shift-click
+    (function()
+      if enabled and hovered_draggable and hovered_draggable.draggable and not dragging_draggable then
+        local draggable = hovered_draggable
+        if mouse_state.left_pressed then
+          if InputIsKeyDown(Key_LSHIFT) then
+            fire_event(draggable, "shift_click", { button = "left" })
+            return
+          else
+            focused_draggable = draggable
           end
-          draggable.x = math.min((draggable.constraints.right or 99999) - draggable.width, math.max(draggable.constraints.left or 0, mouse_state.sx - drag_offset_x))
-          draggable.y = math.min((draggable.constraints.bottom or 99999) - draggable.height, math.max(draggable.constraints.top or 0, mouse_state.sy - drag_offset_y))
-          fire_event(draggable, "drag", { dx = result.dx, dy = result.dy })
-        end,
-        drag_end = function(result)
-          widget_privates[draggable].dragging = false
-          dragging_draggable = nil
-          fire_event(draggable, "drag_end", { start_x = result.start_x, start_y = result.start_y })
         end
-      })
-    end
-
-    if resize_handle_hovered_draggable then
-      local draggable = resize_handle_hovered_draggable.draggable
-      if mouse_state.left_pressed then
-        focused_draggable = draggable
+        if mouse_state.left_pressed then fire_event(draggable, "mouse_down", { button = "left"}) end
+        if mouse_state.right_pressed then fire_event(draggable, "mouse_down", { button = "right"}) end
+        render_dragging_widget_at_mouse_pos(gui, draggable.x, draggable.y, {
+          drag_start = function(result)
+            widget_privates[draggable].dragging = true
+            dragging_draggable = draggable
+            fire_event(draggable, "drag_start")
+          end,
+          was_dragged = function(result)
+            local drag_offset_x = result.drag_offset_x
+            local drag_offset_y = result.drag_offset_y
+            if draggable.drag_anchor == "center" then
+              drag_offset_x = draggable.width / 2
+              drag_offset_y = draggable.height / 2
+            elseif draggable.drag_anchor == "top_left" then
+              drag_offset_x = 0
+              drag_offset_y = 0
+            end
+            draggable.x = math.min((draggable.constraints.right or 99999) - draggable.width, math.max(draggable.constraints.left or 0, mouse_state.sx - drag_offset_x))
+            draggable.y = math.min((draggable.constraints.bottom or 99999) - draggable.height, math.max(draggable.constraints.top or 0, mouse_state.sy - drag_offset_y))
+            fire_event(draggable, "drag", { dx = result.dx, dy = result.dy })
+          end,
+          drag_end = function(result)
+            widget_privates[draggable].dragging = false
+            dragging_draggable = nil
+            fire_event(draggable, "drag_end", { start_x = result.start_x, start_y = result.start_y })
+          end
+        })
       end
-      render_dragging_widget_at_mouse_pos(gui, draggable.x, draggable.y, {
-        drag_start = function(result)
-          resizing_draggable = draggable
-          widget_privates[draggable].hovered = false
-          widget_privates[draggable].resize_handle_index = resize_handle_hovered_draggable.handle_index
-          widget_privates[draggable].resize_handle = resize_handle_hovered_draggable.hovered_handle
-          fire_event(draggable, "resize_start", { handle_index = resize_handle_hovered_draggable.handle_index })
-          resize_start_sx = resize_handle_hovered_draggable.hovered_handle.x + (resize_handle_size / 2)
-          resize_start_sy = resize_handle_hovered_draggable.hovered_handle.y + (resize_handle_size / 2)
-          resize_start_x = draggable.x
-          resize_start_y = draggable.y
-          resize_start_width = draggable.width
-          resize_start_height = draggable.height
-          resize_last_width_fired = draggable.width -- For detecting whether it was resized or not (especially when quantized)
-          resize_last_height_fired = draggable.height
-          aspect_ratio = draggable.width / draggable.height
-        end,
-        was_dragged = function(result)
-          local dx = mouse_state.sx - resize_start_sx
-          local dy = mouse_state.sy - resize_start_sy
-          local change_left = dx * -math.min(widget_privates[draggable].resize_handle.move[1], 0)
-          local change_right = dx * math.max(widget_privates[draggable].resize_handle.move[1], 0)
-          local change_top = dy * -math.min(widget_privates[draggable].resize_handle.move[2], 0)
-          local change_bottom = dy * math.max(widget_privates[draggable].resize_handle.move[2], 0)
 
-          local update_draggable = dofile_once(path .. "resize.lua")
-          change_left, change_top, change_right, change_bottom = update_draggable({
-            x = resize_start_x, y = resize_start_y,
-            width = resize_start_width,
-            height = resize_start_height,
-            min_width = draggable.min_width,
-            min_height = draggable.min_height,
-            max_width = draggable.max_width,
-            max_height = draggable.max_height,
-            constraints = draggable.constraints,
-            quantization = draggable.resize_granularity,
-            symmetrical = draggable.resize_symmetrical,
-            aspect = draggable.resize_keep_aspect_ratio,
-          }, change_left, change_top, change_right, change_bottom, widget_privates[draggable].resize_handle_index)
-
-          draggable.x = resize_start_x + change_left
-          draggable.y = resize_start_y + change_top
-          draggable.width = resize_start_width - change_left + change_right
-          draggable.height = resize_start_height - change_top + change_bottom
-
-          -- Recalculate the values
-          local resize_handles = calculate_handle_props(draggable, resize_handle_size)
-          widget_privates[draggable].resize_handle = resize_handles[widget_privates[draggable].resize_handle_index]
-          local has_moved = resize_last_width_fired ~= draggable.width or resize_last_height_fired ~= draggable.height
-          if has_moved then
-            fire_event(draggable, "resize", { handle_index = widget_privates[draggable].resize_handle_index })
-            resize_last_width_fired = draggable.width
+      if enabled and resize_handle_hovered_draggable then
+        local draggable = resize_handle_hovered_draggable.draggable
+        if mouse_state.left_pressed then
+          if InputIsKeyDown(Key_LSHIFT) then
+            return
+          else
+            focused_draggable = draggable
+          end
+        end
+        render_dragging_widget_at_mouse_pos(gui, draggable.x, draggable.y, {
+          drag_start = function(result)
+            resizing_draggable = draggable
+            widget_privates[draggable].hovered = false
+            widget_privates[draggable].resize_handle_index = resize_handle_hovered_draggable.handle_index
+            widget_privates[draggable].resize_handle = resize_handle_hovered_draggable.hovered_handle
+            fire_event(draggable, "resize_start", { handle_index = resize_handle_hovered_draggable.handle_index })
+            resize_start_sx = resize_handle_hovered_draggable.hovered_handle.x + (resize_handle_size / 2)
+            resize_start_sy = resize_handle_hovered_draggable.hovered_handle.y + (resize_handle_size / 2)
+            resize_start_x = draggable.x
+            resize_start_y = draggable.y
+            resize_start_width = draggable.width
+            resize_start_height = draggable.height
+            resize_last_width_fired = draggable.width -- For detecting whether it was resized or not (especially when quantized)
             resize_last_height_fired = draggable.height
+            aspect_ratio = draggable.width / draggable.height
+          end,
+          was_dragged = function(result)
+            local dx = mouse_state.sx - resize_start_sx
+            local dy = mouse_state.sy - resize_start_sy
+            local change_left = dx * -math.min(widget_privates[draggable].resize_handle.move[1], 0)
+            local change_right = dx * math.max(widget_privates[draggable].resize_handle.move[1], 0)
+            local change_top = dy * -math.min(widget_privates[draggable].resize_handle.move[2], 0)
+            local change_bottom = dy * math.max(widget_privates[draggable].resize_handle.move[2], 0)
+  
+            local update_draggable = dofile_once(path .. "resize.lua")
+            change_left, change_top, change_right, change_bottom = update_draggable({
+              x = resize_start_x, y = resize_start_y,
+              width = resize_start_width,
+              height = resize_start_height,
+              min_width = draggable.min_width,
+              min_height = draggable.min_height,
+              max_width = draggable.max_width,
+              max_height = draggable.max_height,
+              constraints = draggable.constraints,
+              quantization = draggable.resize_granularity,
+              symmetrical = draggable.resize_symmetrical,
+              aspect = draggable.resize_keep_aspect_ratio,
+            }, change_left, change_top, change_right, change_bottom, widget_privates[draggable].resize_handle_index)
+  
+            draggable.x = resize_start_x + change_left
+            draggable.y = resize_start_y + change_top
+            draggable.width = resize_start_width - change_left + change_right
+            draggable.height = resize_start_height - change_top + change_bottom
+  
+            -- Recalculate the values
+            local resize_handles = calculate_handle_props(draggable, resize_handle_size)
+            widget_privates[draggable].resize_handle = resize_handles[widget_privates[draggable].resize_handle_index]
+            local has_moved = resize_last_width_fired ~= draggable.width or resize_last_height_fired ~= draggable.height
+            if has_moved then
+              fire_event(draggable, "resize", { handle_index = widget_privates[draggable].resize_handle_index })
+              resize_last_width_fired = draggable.width
+              resize_last_height_fired = draggable.height
+            end
+          end,
+          drag_end = function(result)
+            fire_event(draggable, "resize_end", { handle_index = widget_privates[draggable].resize_handle_index })
+            widget_privates[draggable].resize_handle_index = nil
+            resizing_draggable = nil
           end
-        end,
-        drag_end = function(result)
-          fire_event(draggable, "resize_end", { handle_index = widget_privates[draggable].resize_handle_index })
-          widget_privates[draggable].resize_handle_index = nil
-          resizing_draggable = nil
+        })
+        if do_draw_resize_cursor then
+          draw_resize_cursor(gui, resize_handle_hovered_draggable.handle_index, sx, sy)
         end
-      })
-      if do_draw_resize_cursor then
-        draw_resize_cursor(gui, resize_handle_hovered_draggable.handle_index, sx, sy)
       end
-    end
+    end)()
 
     mouse_state.world_x, mouse_state.world_y = DEBUG_GetMouseWorld()
 

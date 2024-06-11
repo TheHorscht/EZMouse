@@ -13,7 +13,8 @@ You also need to call GuiStartFrame(gui) before EZMouse.update().
 ```lua
 gui = gui or GuiCreate()
 GuiStartFrame(gui)
-EZMouse.update(gui)
+EZMouse.update(gui, enabled) -- gui:guiobject, enabled:boolean
+-- if enabled is false, all widgets will be non-interactable
 ```
 After that, the library is ready to use. -- For instance you can get variousthe current world and screen position of the mouse cursor using:
 ### Mouse coordinates
@@ -36,6 +37,7 @@ Events:
 - **mouse_down** `Event args: { button : string = "left" | "right", screen_x : number, screen_y : number, world_x : number, world_y : number }`
 - **mouse_up** `Event args: { button : string = "left" | "right", screen_x : number, screen_y : number, world_x : number, world_y : number }`
 - **mouse_move** `Event args: { screen_x : number, screen_y : number, world_x : number, world_y : number, dx : number, dy : number }`
+- **shift_click** `Event args: { button : "left" }`
 
 Example usage:
 ```lua
