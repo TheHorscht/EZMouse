@@ -24,6 +24,14 @@ local do_draw_resize_cursor = false
 local resize_handle_size = 8
 local drag_tolerance = 2
 local drag_tolerance_sq = drag_tolerance * drag_tolerance
+local custom_screen_resolution_x
+local custom_screen_resolution_y
+
+local function update_custom_screen_resolution()
+  custom_screen_resolution_x = ModSettingGet("EZMouse.custom_screen_resolution_x") or 1280
+  custom_screen_resolution_y = ModSettingGet("EZMouse.custom_screen_resolution_y") or 720
+end
+update_custom_screen_resolution()
 
 local function are_floats_equal(f1, f2)
   return math.abs(f1 - f2) < 0.0001
@@ -353,7 +361,8 @@ local function update(gui, enabled)
 
     local screen_width, screen_height = GuiGetScreenDimensions(gui)
     local mouse_raw_x, mouse_raw_y = InputGetMousePosOnScreen()
-    mouse_state.sx, mouse_state.sy = mouse_raw_x * screen_width / 1280, mouse_raw_y * screen_height / 720
+    mouse_state.sx = mouse_raw_x * screen_width / custom_screen_resolution_x
+    mouse_state.sy = mouse_raw_y * screen_height / custom_screen_resolution_y
     -- Calculate mMouseDelta ourselves because the native one isn't consistent across all window sizes
     mouse_state.dx = mouse_state.sx - mouse_loop_last_sx
     mouse_state.dy = mouse_state.sy - mouse_loop_last_sy
@@ -576,7 +585,8 @@ return function(lib_path)
     Widget = Widget,
     update = update,
     AddEventListener = AddEventListener,
-    RemoveEventListener = RemoveEventListener
+    RemoveEventListener = RemoveEventListener,
+    UpdateCustomScreenResolution = update_custom_screen_resolution
   }, {
     __index = function(self, key)
       return ({
