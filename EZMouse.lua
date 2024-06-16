@@ -381,7 +381,7 @@ local function update(gui, enabled)
       end
       -- Check current hover status of all widgets, main area and resize handles
       for i, draggable in ipairs(widget_instances) do
-        if draggable.enabled then
+        if enabled and draggable.enabled then
           local resize_handle_size_ = draggable.resizable and resize_handle_size or 0
           widget_privates[draggable].hovered = is_inside_rect(mouse_state.sx, mouse_state.sy, draggable.x + resize_handle_size_/2, draggable.y + resize_handle_size_/2, draggable.width - resize_handle_size_, draggable.height - resize_handle_size_)
           widget_privates[draggable].hovered = draggable.hoverable and widget_privates[draggable].hovered
