@@ -1,5 +1,5 @@
 -- ====================
--- || EZMouse v0.4.0 ||
+-- || EZMouse v0.5.0 ||
 -- ====================
 
 dofile_once("data/scripts/lib/utilities.lua")
